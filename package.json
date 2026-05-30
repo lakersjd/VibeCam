@@ -1,0 +1,13 @@
+{
+  "name": "vibecam-random-video-chat",
+  "version": "1.0.0",
+  "description": "Original OmeTV-style random video chat prototype",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "latest",
+    "socket.io": "latest"
+  }
+}

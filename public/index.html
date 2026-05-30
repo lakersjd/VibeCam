@@ -1,0 +1,107 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VibeCam</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <main class="app">
+
+    <section class="main-screen">
+      <header class="top-bar">
+        <div class="brand-box">
+          <div class="logo">VC</div>
+          <div>
+            <h1>VibeCam</h1>
+            
+          </div>
+        </div>
+
+        <div class="status-box">
+          <div class="statusDot" id="statusDot"></div>
+          <div>
+            <strong id="statusText">Offline</strong>
+            <span id="partnerText"></span>
+          </div>
+        </div>
+      </header>
+
+      <div class="video-zone">
+        <div class="videoCard remote-card">
+          <video id="remoteVideo" autoplay playsinline></video>
+          <div class="emptyState" id="remoteEmpty">
+            <div class="pixel-face">?</div>
+            <p>WAITING FOR STRANGER</p>
+          </div>
+          <div class="videoLabel" id="remoteLabel">STRANGER</div>
+        </div>
+
+        <div class="videoCard local-card">
+          <video id="localVideo" autoplay muted playsinline></video>
+          <div class="videoLabel">YOU</div>
+        </div>
+      </div>
+
+      <div class="control-bar">
+        <div class="iam-box">
+          <span>I AM</span>
+          <button class="tiny-toggle active" data-value="Male">MALE</button>
+          <button class="tiny-toggle" data-value="Female">FEMALE</button>
+        </div>
+
+        <button id="nextBtn" class="main-action">NEXT</button>
+        <button id="stopBtn" class="main-action stop-red" disabled>STOP</button>
+      </div>
+    </section>
+
+    <aside class="side-panel">
+      <div class="box">
+        <h2>FILTERS</h2>
+<label>COUNTRY</label>
+        <select id="countryInput">
+          <option>Any</option>
+          <option>United States</option>
+          <option>Canada</option>
+          <option>United Kingdom</option>
+          <option>Mexico</option>
+          <option>Dominican Republic</option>
+          <option>Puerto Rico</option>
+          <option>Colombia</option>
+          <option>Brazil</option>
+          <option>France</option>
+          <option>Germany</option>
+          <option>Spain</option>
+          <option>Italy</option>
+          <option>India</option>
+          <option>Japan</option>
+          <option>South Korea</option>
+          <option>Other</option>
+        </select>
+      </div>
+
+      <div class="box chat-box">
+        <h2>CHAT LOG</h2>
+
+        <div id="messages" class="messages">
+          
+        </div>
+
+        <div class="chatInput">
+          <input id="messageInput" maxlength="500" placeholder="Message..." />
+          <button id="sendBtn" disabled>SEND</button>
+        </div>
+      </div>
+    </aside>
+
+  </main>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
+
+
+
+
