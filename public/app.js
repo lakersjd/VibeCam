@@ -1,5 +1,9 @@
 const socket = io();
 
+const landingPage = document.getElementById("landingPage");
+const enterChatBtn = document.getElementById("enterChatBtn");
+const homeBtn = document.getElementById("homeBtn");
+
 const localVideo = document.getElementById("localVideo");
 const remoteVideo = document.getElementById("remoteVideo");
 const remoteEmpty = document.getElementById("remoteEmpty");
@@ -9,6 +13,8 @@ const matchInput = document.getElementById("matchInput");
 
 const nextBtn = document.getElementById("nextBtn");
 const stopBtn = document.getElementById("stopBtn");
+const micBtn = document.getElementById("micBtn");
+const camBtn = document.getElementById("camBtn");
 
 const statusText = document.getElementById("statusText");
 const partnerText = document.getElementById("partnerText");
@@ -23,6 +29,8 @@ let localStream = null;
 let peer = null;
 let partnerId = null;
 let started = false;
+let micOn = true;
+let camOn = true;
 
 const rtcConfig = {
   iceServers: [
@@ -73,6 +81,23 @@ async function startCamera() {
   });
 
   localVideo.srcObject = localStream;
+  micBtn.disabled = false;
+  camBtn.disabled = false;
+}
+
+function applyMediaToggles() {
+  if (!localStream) return;
+
+  localStream.getAudioTracks().forEach(track => {
+    track.enabled = micOn;
+  });
+
+  localStream.getVideoTracks().forEach(track => {
+    track.enabled = camOn;
+  });
+
+  micBtn.classList.toggle("off", !micOn);
+  camBtn.classList.toggle("off", !camOn);
 }
 
 function createPeer() {
@@ -136,6 +161,7 @@ function cleanupCall() {
 async function joinQueue() {
   try {
     await startCamera();
+    applyMediaToggles();
 
     cleanupCall();
 
@@ -250,6 +276,25 @@ function sendMessage() {
   socket.emit("chat-message", text);
   messageInput.value = "";
 }
+
+enterChatBtn.addEventListener("click", () => {
+  landingPage.classList.add("hidden");
+});
+
+homeBtn.addEventListener("click", () => {
+  stopMatching();
+  landingPage.classList.remove("hidden");
+});
+
+micBtn.addEventListener("click", () => {
+  micOn = !micOn;
+  applyMediaToggles();
+});
+
+camBtn.addEventListener("click", () => {
+  camOn = !camOn;
+  applyMediaToggles();
+});
 
 nextBtn.addEventListener("click", nextMatch);
 stopBtn.addEventListener("click", stopMatching);
