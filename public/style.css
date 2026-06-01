@@ -935,3 +935,21 @@ select option:checked {
 .landing-logo {
   border-radius: 10px;
 }
+
+/* Less rounded top bars */
+.top-bar,
+.landing-nav {
+  border-radius: 8px !important;
+}
+
+.home-button,
+.logo,
+.landing-mini-logo {
+  border-radius: 8px !important;
+}
+
+.landing-nav-links,
+.landing-nav-links a,
+.nav-enter-btn {
+  border-radius: 8px !important;
+}
