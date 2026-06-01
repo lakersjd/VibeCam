@@ -5,67 +5,145 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Xlink.VC Admin</title>
   <style>
-    * { box-sizing: border-box; }
+    * {
+      box-sizing: border-box;
+    }
+
+    :root {
+      --bg: #05060a;
+      --panel: #11131b;
+      --card: #171a24;
+      --soft: #202432;
+      --line: rgba(255,255,255,0.1);
+      --text: #f5f5f7;
+      --muted: #a7adbb;
+      --accent: #8b5cf6;
+      --green: #22c55e;
+      --yellow: #f59e0b;
+      --red: #ef4444;
+      --radius: 14px;
+    }
 
     body {
       margin: 0;
-      background: #05060a;
-      color: #f5f5f7;
+      background:
+        radial-gradient(circle at 30% 0%, rgba(139,92,246,0.18), transparent 34%),
+        var(--bg);
+      color: var(--text);
       font-family: Inter, system-ui, Arial, sans-serif;
     }
 
     .wrap {
-      width: min(1200px, 94%);
+      width: min(1280px, 94%);
       margin: auto;
-      padding: 28px 0;
+      padding: 28px 0 50px;
     }
 
     header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 22px;
+      gap: 16px;
+      margin-bottom: 20px;
     }
 
-    h1, h2, p { margin-top: 0; }
+    h1,
+    h2,
+    p {
+      margin-top: 0;
+    }
 
-    p { color: #a7adbb; }
+    h1 {
+      font-size: clamp(28px, 4vw, 46px);
+      letter-spacing: -0.04em;
+      margin-bottom: 8px;
+    }
+
+    h2 {
+      font-size: 18px;
+    }
+
+    p {
+      color: var(--muted);
+    }
+
+    .top-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
 
     button {
       border: 0;
-      background: #8b5cf6;
+      background: var(--accent);
       color: white;
       padding: 10px 14px;
-      border-radius: 10px;
+      border-radius: 12px;
       font-weight: 800;
       cursor: pointer;
     }
 
+    button:hover {
+      opacity: 0.9;
+    }
+
     button.danger {
-      background: #ef4444;
+      background: var(--red);
+    }
+
+    button.soft {
+      background: var(--soft);
+      border: 1px solid var(--line);
     }
 
     .grid {
       display: grid;
-      grid-template-columns: repeat(3, 1fr);
+      grid-template-columns: repeat(4, 1fr);
       gap: 14px;
       margin-bottom: 14px;
     }
 
-    .card {
-      border: 1px solid rgba(255,255,255,0.1);
-      background: #12141c;
-      border-radius: 14px;
+    .card,
+    .section {
+      border: 1px solid var(--line);
+      background: rgba(17,19,27,0.88);
+      border-radius: var(--radius);
       padding: 18px;
+      box-shadow: 0 20px 70px rgba(0,0,0,0.25);
     }
 
     .number {
-      font-size: 34px;
+      font-size: 36px;
       font-weight: 900;
+      letter-spacing: -0.05em;
     }
 
     .section {
       margin-top: 14px;
+    }
+
+    .section-top {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 14px;
+    }
+
+    input {
+      width: min(360px, 100%);
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.05);
+      color: var(--text);
+      padding: 11px 12px;
+      border-radius: 12px;
+      outline: none;
+    }
+
+    input:focus {
+      border-color: rgba(139,92,246,0.7);
+      box-shadow: 0 0 0 3px rgba(139,92,246,0.16);
     }
 
     table {
@@ -74,33 +152,128 @@
       font-size: 14px;
     }
 
-    th, td {
+    th,
+    td {
       text-align: left;
-      padding: 12px;
+      padding: 13px 10px;
       border-bottom: 1px solid rgba(255,255,255,0.08);
       vertical-align: top;
     }
 
     th {
-      color: #a7adbb;
+      color: var(--muted);
       font-size: 12px;
       text-transform: uppercase;
+      letter-spacing: 0.04em;
     }
 
     code {
       color: #ddd6fe;
       word-break: break-all;
+      font-size: 12px;
     }
 
     .empty {
-      color: #a7adbb;
-      padding: 12px 0;
+      color: var(--muted);
+      padding: 14px 0;
     }
 
-    @media (max-width: 800px) {
-      .grid { grid-template-columns: 1fr; }
-      table { font-size: 12px; }
-      th, td { padding: 8px; }
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 9px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 800;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.05);
+    }
+
+    .pill.green {
+      color: #bbf7d0;
+      border-color: rgba(34,197,94,0.35);
+      background: rgba(34,197,94,0.12);
+    }
+
+    .pill.yellow {
+      color: #fde68a;
+      border-color: rgba(245,158,11,0.35);
+      background: rgba(245,158,11,0.12);
+    }
+
+    .pill.red {
+      color: #fecaca;
+      border-color: rgba(239,68,68,0.35);
+      background: rgba(239,68,68,0.12);
+    }
+
+    .hash-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .small-btn {
+      padding: 7px 9px;
+      border-radius: 9px;
+      font-size: 12px;
+    }
+
+    .muted {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+    }
+
+    .tab {
+      background: var(--soft);
+      border: 1px solid var(--line);
+    }
+
+    .tab.active {
+      background: var(--accent);
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    @media (max-width: 900px) {
+      header {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .grid {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      table {
+        font-size: 12px;
+      }
+
+      th,
+      td {
+        padding: 9px 6px;
+      }
+    }
+
+    @media (max-width: 560px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
+
+      .section-top {
+        align-items: flex-start;
+        flex-direction: column;
+      }
     }
   </style>
 </head>
@@ -109,9 +282,14 @@
     <header>
       <div>
         <h1>Xlink.VC Admin</h1>
-        <p>Reports, bans, and live safety stats.</p>
+        <p>Moderation dashboard for reports, bans, and live user stats.</p>
+        <p class="muted" id="lastUpdated">Last updated: never</p>
       </div>
-      <button onclick="loadAdmin()">Refresh</button>
+
+      <div class="top-actions">
+        <button class="soft" onclick="toggleAutoRefresh()" id="autoBtn">Auto Refresh: ON</button>
+        <button onclick="loadAdmin()">Refresh</button>
+      </div>
     </header>
 
     <section class="grid">
@@ -129,42 +307,116 @@
         <p>Matched pairs</p>
         <div class="number" id="matchedPairs">0</div>
       </div>
+
+      <div class="card">
+        <p>Active bans</p>
+        <div class="number" id="activeBanCount">0</div>
+      </div>
     </section>
 
-    <section class="card section">
-      <h2>Active Bans</h2>
-      <div id="bans"></div>
-    </section>
+    <div class="tabs">
+      <button class="tab active" id="reportsTab" onclick="showTab('reports')">Reports</button>
+      <button class="tab" id="bansTab" onclick="showTab('bans')">Bans</button>
+    </div>
 
-    <section class="card section">
-      <h2>Reports</h2>
-      <button class="danger" onclick="clearReports()">Clear Reports</button>
+    <section class="section" id="reportsSection">
+      <div class="section-top">
+        <div>
+          <h2>Reports</h2>
+          <p class="muted">Newest reports show first.</p>
+        </div>
+
+        <div class="top-actions">
+          <input id="reportSearch" placeholder="Search reports..." oninput="renderReports(lastReports)" />
+          <button class="danger" onclick="clearReports()">Clear Reports</button>
+        </div>
+      </div>
+
       <div id="reports"></div>
+    </section>
+
+    <section class="section hidden" id="bansSection">
+      <div class="section-top">
+        <div>
+          <h2>Active Bans</h2>
+          <p class="muted">Temporary safety bans currently active.</p>
+        </div>
+
+        <input id="banSearch" placeholder="Search bans..." oninput="renderBans(lastBans)" />
+      </div>
+
+      <div id="bans"></div>
     </section>
   </div>
 
   <script>
+    let lastReports = [];
+    let lastBans = [];
+    let autoRefresh = true;
+    let refreshTimer = null;
+
     function formatTime(ms) {
       if (!ms) return "Unknown";
       return new Date(ms).toLocaleString();
+    }
+
+    function timeLeft(expiresAt) {
+      const left = expiresAt - Date.now();
+
+      if (left <= 0) return "Expired";
+
+      const seconds = Math.floor(left / 1000);
+      const minutes = Math.floor(seconds / 60);
+      const remainingSeconds = seconds % 60;
+
+      return `${minutes}m ${remainingSeconds}s`;
+    }
+
+    function shortHash(hash) {
+      if (!hash) return "";
+      return hash.slice(0, 12) + "...";
+    }
+
+    async function copyText(text) {
+      await navigator.clipboard.writeText(text);
+      alert("Copied.");
+    }
+
+    function showTab(tab) {
+      document.getElementById("reportsSection").classList.toggle("hidden", tab !== "reports");
+      document.getElementById("bansSection").classList.toggle("hidden", tab !== "bans");
+
+      document.getElementById("reportsTab").classList.toggle("active", tab === "reports");
+      document.getElementById("bansTab").classList.toggle("active", tab === "bans");
     }
 
     async function loadAdmin() {
       const res = await fetch("/api/admin/stats");
       const data = await res.json();
 
-      document.getElementById("activeUsers").textContent = data.activeUsers;
-      document.getElementById("waitingUsers").textContent = data.waitingUsers;
-      document.getElementById("matchedPairs").textContent = data.matchedPairs;
+      lastReports = data.reports || [];
+      lastBans = data.activeBans || [];
 
-      renderBans(data.activeBans || []);
-      renderReports(data.reports || []);
+      document.getElementById("activeUsers").textContent = data.activeUsers || 0;
+      document.getElementById("waitingUsers").textContent = data.waitingUsers || 0;
+      document.getElementById("matchedPairs").textContent = data.matchedPairs || 0;
+      document.getElementById("activeBanCount").textContent = lastBans.length;
+      document.getElementById("lastUpdated").textContent = "Last updated: " + new Date().toLocaleTimeString();
+
+      renderBans(lastBans);
+      renderReports(lastReports);
     }
 
     function renderBans(bans) {
       const root = document.getElementById("bans");
+      const query = document.getElementById("banSearch").value.toLowerCase();
 
-      if (!bans.length) {
+      const filtered = bans.filter(ban => {
+        const text = `${ban.ipHash} ${ban.reason} ${formatTime(ban.createdAt)} ${formatTime(ban.expiresAt)}`.toLowerCase();
+        return text.includes(query);
+      });
+
+      if (!filtered.length) {
         root.innerHTML = '<p class="empty">No active bans.</p>';
         return;
       }
@@ -173,6 +425,7 @@
         <table>
           <thead>
             <tr>
+              <th>Status</th>
               <th>IP Hash</th>
               <th>Reason</th>
               <th>Created</th>
@@ -181,13 +434,19 @@
             </tr>
           </thead>
           <tbody>
-            ${bans.map(ban => `
+            ${filtered.map(ban => `
               <tr>
-                <td><code>${ban.ipHash}</code></td>
-                <td>${ban.reason}</td>
+                <td><span class="pill red">${timeLeft(ban.expiresAt)}</span></td>
+                <td>
+                  <div class="hash-row">
+                    <code title="${ban.ipHash}">${shortHash(ban.ipHash)}</code>
+                    <button class="small-btn soft" onclick="copyText('${ban.ipHash}')">Copy</button>
+                  </div>
+                </td>
+                <td>${ban.reason || ""}</td>
                 <td>${formatTime(ban.createdAt)}</td>
                 <td>${formatTime(ban.expiresAt)}</td>
-                <td><button onclick="unban('${ban.ipHash}')">Unban</button></td>
+                <td><button class="small-btn" onclick="unban('${ban.ipHash}')">Unban</button></td>
               </tr>
             `).join("")}
           </tbody>
@@ -197,8 +456,14 @@
 
     function renderReports(reports) {
       const root = document.getElementById("reports");
+      const query = document.getElementById("reportSearch").value.toLowerCase();
 
-      if (!reports.length) {
+      const filtered = reports.filter(report => {
+        const text = JSON.stringify(report).toLowerCase();
+        return text.includes(query);
+      });
+
+      if (!filtered.length) {
         root.innerHTML = '<p class="empty">No reports yet.</p>';
         return;
       }
@@ -207,21 +472,31 @@
         <table>
           <thead>
             <tr>
-              <th>Time</th>
               <th>Type</th>
               <th>Reason</th>
               <th>Reporter</th>
               <th>Reported</th>
+              <th>Time</th>
             </tr>
           </thead>
           <tbody>
-            ${reports.map(report => `
+            ${filtered.map(report => `
               <tr>
-                <td>${formatTime(report.createdAt)}</td>
-                <td>${report.type || "report"}</td>
+                <td><span class="pill ${report.type?.includes('ban') ? 'red' : 'yellow'}">${report.type || "report"}</span></td>
                 <td>${report.reason || ""}</td>
-                <td><code>${report.reporterIpHash || report.userIpHash || ""}</code></td>
-                <td><code>${report.reportedIpHash || ""}</code></td>
+                <td>
+                  ${report.reporterIpHash || report.userIpHash
+                    ? `<div class="hash-row"><code>${shortHash(report.reporterIpHash || report.userIpHash)}</code><button class="small-btn soft" onclick="copyText('${report.reporterIpHash || report.userIpHash}')">Copy</button></div>`
+                    : '<span class="muted">None</span>'
+                  }
+                </td>
+                <td>
+                  ${report.reportedIpHash
+                    ? `<div class="hash-row"><code>${shortHash(report.reportedIpHash)}</code><button class="small-btn soft" onclick="copyText('${report.reportedIpHash}')">Copy</button></div>`
+                    : '<span class="muted">None</span>'
+                  }
+                </td>
+                <td>${formatTime(report.createdAt)}</td>
               </tr>
             `).join("")}
           </tbody>
@@ -230,6 +505,8 @@
     }
 
     async function unban(ipHash) {
+      if (!confirm("Unban this user?")) return;
+
       await fetch("/api/admin/unban", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -249,8 +526,26 @@
       loadAdmin();
     }
 
+    function toggleAutoRefresh() {
+      autoRefresh = !autoRefresh;
+      document.getElementById("autoBtn").textContent = "Auto Refresh: " + (autoRefresh ? "ON" : "OFF");
+
+      if (autoRefresh) {
+        startTimer();
+      } else {
+        clearInterval(refreshTimer);
+      }
+    }
+
+    function startTimer() {
+      clearInterval(refreshTimer);
+      refreshTimer = setInterval(() => {
+        if (autoRefresh) loadAdmin();
+      }, 5000);
+    }
+
     loadAdmin();
-    setInterval(loadAdmin, 10000);
+    startTimer();
   </script>
 </body>
 </html>
