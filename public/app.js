@@ -5,6 +5,19 @@ const enterChatBtn = document.getElementById("enterChatBtn");
 const homeBtn = document.getElementById("homeBtn");
 const refreshBtn = document.getElementById("refreshBtn");
 
+function setSavedPage(page) {
+  localStorage.setItem("vibechat_page", page);
+
+  if (page === "chat") {
+    landingPage.classList.add("hidden");
+  } else {
+    landingPage.classList.remove("hidden");
+  }
+}
+
+const savedPage = localStorage.getItem("vibechat_page") || "landing";
+setSavedPage(savedPage);
+
 const localVideo = document.getElementById("localVideo");
 const remoteVideo = document.getElementById("remoteVideo");
 const remoteEmpty = document.getElementById("remoteEmpty");
@@ -279,15 +292,17 @@ function sendMessage() {
 }
 
 enterChatBtn.addEventListener("click", () => {
-  landingPage.classList.add("hidden");
+  setSavedPage("chat");
 });
 
 homeBtn.addEventListener("click", () => {
   stopMatching();
-  landingPage.classList.remove("hidden");
+  setSavedPage("landing");
 });
 
 refreshBtn.addEventListener("click", () => {
+  const currentPage = landingPage.classList.contains("hidden") ? "chat" : "landing";
+  localStorage.setItem("vibechat_page", currentPage);
   location.reload();
 });
 
@@ -337,4 +352,5 @@ socket.on("partner-left", () => {
 socket.on("stopped", () => {
   setStatus("Stopped", "", "");
 });
+
 
