@@ -1,10 +1,11 @@
-﻿const socket = io();
+const socket = io();
 
 const localVideo = document.getElementById("localVideo");
 const remoteVideo = document.getElementById("remoteVideo");
 const remoteEmpty = document.getElementById("remoteEmpty");
 
 const countryInput = document.getElementById("countryInput");
+const matchInput = document.getElementById("matchInput");
 
 const nextBtn = document.getElementById("nextBtn");
 const stopBtn = document.getElementById("stopBtn");
@@ -36,11 +37,17 @@ document.querySelectorAll(".tiny-toggle").forEach(button => {
     button.classList.add("active");
     selectedGender = button.dataset.value;
 
-    if (started) {
-      nextMatch();
-    }
+    if (started) nextMatch();
   });
 });
+
+function getProfile() {
+  return {
+    gender: selectedGender,
+    wantsGender: matchInput.value || "Any",
+    country: countryInput.value || "Any"
+  };
+}
 
 function setStatus(title, detail, mode) {
   statusText.textContent = title;
@@ -109,7 +116,7 @@ function createPeer() {
     if (!peer) return;
 
     if (peer.connectionState === "connected") {
-      setStatus("Connected", "You are live with a stranger.", "live");
+      setStatus("Connected", "Live with stranger.", "live");
     }
 
     if (
@@ -145,13 +152,10 @@ async function joinQueue() {
     stopBtn.disabled = false;
 
     messages.innerHTML = "";
-    addSystem("SEARCHING FOR A MATCH...");
-    setStatus("Searching", "Matching by country and I AM option...", "searching");
+    addSystem("SEARCHING...");
+    setStatus("Searching", "Finding a match...", "searching");
 
-    socket.emit("join", {
-      gender: selectedGender,
-      country: countryInput.value || "Any"
-    });
+    socket.emit("join", getProfile());
   } catch (error) {
     addSystem("CAMERA OR MICROPHONE BLOCKED.");
     setStatus("Camera blocked", "Allow camera and microphone, then press NEXT.", "");
@@ -167,15 +171,10 @@ function nextMatch() {
 
   cleanupCall();
   messages.innerHTML = "";
-  addSystem("SKIPPING... SEARCHING AGAIN.");
-  setStatus("Searching", "Finding someone new...", "searching");
+  addSystem("SEARCHING...");
+  setStatus("Searching", "Finding a match...", "searching");
 
-  socket.emit("join", {
-    gender: selectedGender,
-    country: countryInput.value || "Any"
-  });
-
-  socket.emit("next");
+  socket.emit("next", getProfile());
 }
 
 function stopMatching() {
@@ -185,13 +184,13 @@ function stopMatching() {
   started = false;
 
   stopBtn.disabled = true;
-  setStatus("Stopped", "Press NEXT to start again.", "");
+  setStatus("Stopped", "", "");
   messages.innerHTML = "";
-  addSystem("STOPPED.");
 }
 
 async function handleMatched(data) {
   partnerId = data.partnerId;
+
   const partnerGender = data.partner?.gender || "Unknown";
   const partnerCountry = data.partner?.country || "Unknown";
 
@@ -201,7 +200,7 @@ async function handleMatched(data) {
   sendBtn.disabled = false;
 
   messages.innerHTML = "";
-  addSystem("MATCHED WITH STRANGER.");
+  addSystem("MATCHED.");
 
   createPeer();
 
@@ -289,12 +288,11 @@ socket.on("partner-left", () => {
   cleanupCall();
 
   if (started) {
-    setStatus("Searching", "Partner left. Press NEXT to search again.", "searching");
+    setStatus("Searching", "Partner left. Press NEXT.", "searching");
     addSystem("PARTNER LEFT.");
   }
 });
 
 socket.on("stopped", () => {
-  setStatus("Stopped", "Press NEXT to start again.", "");
+  setStatus("Stopped", "", "");
 });
-

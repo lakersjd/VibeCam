@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -15,7 +15,6 @@
           <div class="logo">VC</div>
           <div>
             <h1>VibeCam</h1>
-            
           </div>
         </div>
 
@@ -59,7 +58,8 @@
     <aside class="side-panel">
       <div class="box">
         <h2>FILTERS</h2>
-<label>COUNTRY</label>
+
+        <label>COUNTRY</label>
         <select id="countryInput">
           <option>Any</option>
           <option>United States</option>
@@ -79,14 +79,19 @@
           <option>South Korea</option>
           <option>Other</option>
         </select>
+
+        <label>MATCH</label>
+        <select id="matchInput">
+          <option value="Any">Random</option>
+          <option value="Male">Male</option>
+          <option value="Female">Female</option>
+        </select>
       </div>
 
       <div class="box chat-box">
         <h2>CHAT LOG</h2>
 
-        <div id="messages" class="messages">
-          
-        </div>
+        <div id="messages" class="messages"></div>
 
         <div class="chatInput">
           <input id="messageInput" maxlength="500" placeholder="Message..." />
@@ -101,7 +106,3 @@
   <script src="app.js"></script>
 </body>
 </html>
-
-
-
-

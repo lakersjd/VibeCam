@@ -1,4 +1,4 @@
-﻿const express = require("express");
+const express = require("express");
 const http = require("http");
 const { Server } = require("socket.io");
 
@@ -21,14 +21,20 @@ function removeFromQueue(id) {
   if (index !== -1) queue.splice(index, 1);
 }
 
+function saveProfile(socket, profile) {
+  profiles.set(socket.id, {
+    gender: clean(profile?.gender, "Male", 10),
+    wantsGender: clean(profile?.wantsGender, "Any", 10),
+    country: clean(profile?.country, "Any", 30)
+  });
+}
+
 function countryWorks(a, b) {
   return a.country === "Any" || b.country === "Any" || a.country === b.country;
 }
 
 function genderWorks(a, b) {
-  if (a.gender === "Male") return b.gender === "Female";
-  if (a.gender === "Female") return b.gender === "Male";
-  return true;
+  return a.wantsGender === "Any" || a.wantsGender === b.gender;
 }
 
 function compatible(aId, bId) {
@@ -94,41 +100,35 @@ function matchUsers() {
   }
 }
 
-function endPair(id, requeueUser = false) {
-  const partnerId = peers.get(id);
-
+function endPair(id) {
   removeFromQueue(id);
 
-  if (partnerId) {
-    peers.delete(id);
-    peers.delete(partnerId);
+  const partnerId = peers.get(id);
+  if (!partnerId) return;
 
-    const partnerSocket = io.sockets.sockets.get(partnerId);
-    if (partnerSocket) partnerSocket.emit("partner-left");
-  }
+  peers.delete(id);
+  peers.delete(partnerId);
 
-  const userSocket = io.sockets.sockets.get(id);
-  if (requeueUser && userSocket) enqueue(userSocket);
+  const partnerSocket = io.sockets.sockets.get(partnerId);
+  if (partnerSocket) partnerSocket.emit("partner-left");
 }
 
 io.on("connection", socket => {
   socket.on("join", profile => {
-    profiles.set(socket.id, {
-      gender: clean(profile?.gender, "Male", 10),
-      country: clean(profile?.country, "Any", 30)
-    });
-
-    endPair(socket.id, false);
+    saveProfile(socket, profile);
+    endPair(socket.id);
     enqueue(socket);
   });
 
-  socket.on("next", () => {
-    endPair(socket.id, true);
+  socket.on("next", profile => {
+    saveProfile(socket, profile);
+    endPair(socket.id);
+    enqueue(socket);
   });
 
   socket.on("stop", () => {
     removeFromQueue(socket.id);
-    endPair(socket.id, false);
+    endPair(socket.id);
     socket.emit("stopped");
   });
 
@@ -155,7 +155,7 @@ io.on("connection", socket => {
   socket.on("disconnect", () => {
     removeFromQueue(socket.id);
     profiles.delete(socket.id);
-    endPair(socket.id, false);
+    endPair(socket.id);
   });
 });
 
@@ -164,5 +164,3 @@ const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
   console.log("VibeCam running on port " + PORT);
 });
-
-
