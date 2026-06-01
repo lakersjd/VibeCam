@@ -954,23 +954,4 @@ select option:checked {
   border-radius: 8px !important;
 }
 
-.translated-original {
-  display: block;
-  margin-top: 6px;
-  color: rgba(255, 255, 255, 0.58);
-  font-size: 12px;
-  line-height: 1.35;
-}
-
-.landing-language-label {
-  display: block;
-  margin-top: 16px;
-  margin-bottom: 8px;
-  color: var(--muted);
-  font-size: 13px;
-}
-
-.landing-language-select {
-  margin-bottom: 14px;
-}
 

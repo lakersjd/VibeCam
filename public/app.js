@@ -16,7 +16,6 @@ const remoteEmpty = document.getElementById("remoteEmpty");
 
 const countryInput = document.getElementById("countryInput");
 const matchInput = document.getElementById("matchInput");
-const languageInput = document.getElementById("languageInput");
 
 const nextBtn = document.getElementById("nextBtn");
 const stopBtn = document.getElementById("stopBtn");
@@ -115,56 +114,12 @@ function addSystem(text) {
   messages.scrollTop = messages.scrollHeight;
 }
 
-async function translateText(text) {
-  const target = languageInput ? languageInput.value : (localStorage.getItem("xlinkvc_language") || "original");
-
-  if (!text || target === "original") {
-    return text;
-  }
-
-  try {
-    const response = await fetch("/api/translate", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        text,
-        target
-      })
-    });
-
-    const data = await response.json();
-    return data.translated || text;
-  } catch (error) {
-    return text;
-  }
-}
-
-function addMessage(text, mine, originalText = "") {
+function addMessage(text, mine) {
   const div = document.createElement("div");
   div.className = "msg " + (mine ? "me" : "them");
-
-  if (originalText && originalText !== text) {
-    div.innerHTML = `
-      <span>${escapeHtml(text)}</span>
-      <small class="translated-original">${escapeHtml(originalText)}</small>
-    `;
-  } else {
-    div.textContent = text;
-  }
-
+  div.textContent = text;
   messages.appendChild(div);
   messages.scrollTop = messages.scrollHeight;
-}
-
-function escapeHtml(text) {
-  return String(text)
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
 }
 
 function addWarning(reason) {
@@ -549,7 +504,7 @@ async function handleSignal(payload) {
   }
 }
 
-async function sendMessage() {
+function sendMessage() {
   const text = messageInput.value.trim();
   if (!text || !partnerId) return;
 
@@ -559,9 +514,7 @@ async function sendMessage() {
     return;
   }
 
-  const translated = await translateText(text);
-  addMessage(translated, true, text);
-
+  addMessage(text, true);
   socket.emit("chat-message", text);
   messageInput.value = "";
 }
@@ -620,14 +573,13 @@ socket.on("signal", payload => {
   handleSignal(payload).catch(error => console.error(error));
 });
 
-socket.on("chat-message", async payload => {
+socket.on("chat-message", payload => {
   if (containsRacism(payload.text)) {
     addWarning("Racist incoming chat message blocked.");
     return;
   }
 
-  const translated = await translateText(payload.text);
-  addMessage(translated, false, payload.text);
+  addMessage(payload.text, false);
 });
 
 socket.on("partner-left", () => {
@@ -647,6 +599,7 @@ socket.on("banned", data => {
 socket.on("stopped", () => {
   setStatus("Stopped", "", "");
 });
+
 
 
 
