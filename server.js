@@ -9,7 +9,36 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
+app.use(express.json());
 app.use(express.static("public"));
+
+app.post("/api/translate", async (req, res) => {
+  try {
+    const text = String(req.body?.text || "").slice(0, 500);
+    const target = String(req.body?.target || "original");
+
+    if (!text || target === "original") {
+      return res.json({ translated: text });
+    }
+
+    const url =
+      "https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=" +
+      encodeURIComponent(target) +
+      "&dt=t&q=" +
+      encodeURIComponent(text);
+
+    const response = await fetch(url);
+    const data = await response.json();
+
+    const translated = Array.isArray(data?.[0])
+      ? data[0].map(part => part[0]).join("")
+      : text;
+
+    res.json({ translated });
+  } catch (error) {
+    res.json({ translated: req.body?.text || "" });
+  }
+});
 
 const queue = [];
 const peers = new Map();
@@ -329,4 +358,5 @@ const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
   console.log("Xlink.VC running on port " + PORT);
 });
+
 

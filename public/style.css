@@ -953,3 +953,11 @@ select option:checked {
 .nav-enter-btn {
   border-radius: 8px !important;
 }
+
+.translated-original {
+  display: block;
+  margin-top: 6px;
+  color: rgba(255, 255, 255, 0.58);
+  font-size: 12px;
+  line-height: 1.35;
+}
