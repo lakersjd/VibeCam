@@ -23,7 +23,6 @@ let localStream = null;
 let peer = null;
 let partnerId = null;
 let started = false;
-let selectedGender = "Male";
 
 const rtcConfig = {
   iceServers: [
@@ -31,19 +30,8 @@ const rtcConfig = {
   ]
 };
 
-document.querySelectorAll(".tiny-toggle").forEach(button => {
-  button.addEventListener("click", () => {
-    document.querySelectorAll(".tiny-toggle").forEach(btn => btn.classList.remove("active"));
-    button.classList.add("active");
-    selectedGender = button.dataset.value;
-
-    if (started) nextMatch();
-  });
-});
-
 function getProfile() {
   return {
-    gender: selectedGender,
     wantsGender: matchInput.value || "Any",
     country: countryInput.value || "Any"
   };
@@ -77,7 +65,10 @@ async function startCamera() {
   if (localStream) return;
 
   localStream = await navigator.mediaDevices.getUserMedia({
-    video: true,
+    video: {
+      width: { ideal: 1280 },
+      height: { ideal: 720 }
+    },
     audio: true
   });
 
@@ -191,11 +182,11 @@ function stopMatching() {
 async function handleMatched(data) {
   partnerId = data.partnerId;
 
-  const partnerGender = data.partner?.gender || "Unknown";
+  const partnerMatch = data.partner?.wantsGender || "Random";
   const partnerCountry = data.partner?.country || "Unknown";
 
   remoteLabel.textContent = "STRANGER";
-  setStatus("Matched", partnerGender + " | " + partnerCountry, "live");
+  setStatus("Matched", partnerCountry + " | Match: " + partnerMatch, "live");
 
   sendBtn.disabled = false;
 

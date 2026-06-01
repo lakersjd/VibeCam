@@ -23,7 +23,6 @@ function removeFromQueue(id) {
 
 function saveProfile(socket, profile) {
   profiles.set(socket.id, {
-    gender: clean(profile?.gender, "Male", 10),
     wantsGender: clean(profile?.wantsGender, "Any", 10),
     country: clean(profile?.country, "Any", 30)
   });
@@ -33,8 +32,10 @@ function countryWorks(a, b) {
   return a.country === "Any" || b.country === "Any" || a.country === b.country;
 }
 
-function genderWorks(a, b) {
-  return a.wantsGender === "Any" || a.wantsGender === b.gender;
+function matchFilterWorks(a, b) {
+  if (a.wantsGender === "Any" && b.wantsGender === "Any") return true;
+  if (a.wantsGender === "Any" || b.wantsGender === "Any") return true;
+  return a.wantsGender !== b.wantsGender;
 }
 
 function compatible(aId, bId) {
@@ -43,7 +44,7 @@ function compatible(aId, bId) {
 
   if (!a || !b) return false;
 
-  return countryWorks(a, b) && genderWorks(a, b) && genderWorks(b, a);
+  return countryWorks(a, b) && matchFilterWorks(a, b);
 }
 
 function enqueue(socket) {
