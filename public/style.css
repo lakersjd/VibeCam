@@ -955,3 +955,70 @@ select option:checked {
 }
 
 
+
+/* Move filters to top bar */
+.top-bar {
+  display: grid !important;
+  grid-template-columns: auto minmax(330px, 520px) auto;
+  gap: 14px;
+}
+
+.top-filters {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  align-items: end;
+}
+
+.top-filter label {
+  display: block;
+  margin: 0 0 6px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.top-filter select {
+  height: 38px;
+  padding-top: 8px;
+  padding-bottom: 8px;
+  font-size: 13px;
+}
+
+/* Make chat log bigger now that filters are gone */
+.side-panel {
+  grid-template-rows: minmax(0, 1fr) !important;
+}
+
+.chat-box {
+  height: 100%;
+}
+
+.messages {
+  min-height: 0;
+  height: 100%;
+}
+
+/* Slightly wider chat side */
+.app {
+  grid-template-columns: minmax(0, 1fr) 430px;
+}
+
+@media (max-width: 1000px) {
+  .top-bar {
+    grid-template-columns: 1fr !important;
+    align-items: stretch;
+  }
+
+  .top-filters {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .status-box {
+    justify-content: space-between;
+    text-align: left;
+  }
+
+  .app {
+    grid-template-columns: 1fr;
+  }
+}
