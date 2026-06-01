@@ -74,7 +74,7 @@ const rtcConfig = {
 };
 
 function setSavedPage(page) {
-  localStorage.setItem("vibechat_page", page);
+  localStorage.setItem("Xlink.VC_page", page);
 
   if (page === "chat") {
     landingPage.classList.add("hidden");
@@ -83,7 +83,7 @@ function setSavedPage(page) {
   }
 }
 
-const savedPage = localStorage.getItem("vibechat_page") || "landing";
+const savedPage = localStorage.getItem("Xlink.VC_page") || "landing";
 setSavedPage(savedPage);
 
 function getProfile() {
@@ -599,5 +599,6 @@ socket.on("banned", data => {
 socket.on("stopped", () => {
   setStatus("Stopped", "", "");
 });
+
 
 
