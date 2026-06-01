@@ -12,42 +12,15 @@ const io = new Server(server);
 app.use(express.json());
 app.use(express.static("public"));
 
-app.post("/api/translate", async (req, res) => {
-  try {
-    const text = String(req.body?.text || "").slice(0, 500);
-    const target = String(req.body?.target || "original");
-
-    if (!text || target === "original") {
-      return res.json({ translated: text });
-    }
-
-    const url =
-      "https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=" +
-      encodeURIComponent(target) +
-      "&dt=t&q=" +
-      encodeURIComponent(text);
-
-    const response = await fetch(url);
-    const data = await response.json();
-
-    const translated = Array.isArray(data?.[0])
-      ? data[0].map(part => part[0]).join("")
-      : text;
-
-    res.json({ translated });
-  } catch (error) {
-    res.json({ translated: req.body?.text || "" });
-  }
-});
-
 const queue = [];
 const peers = new Map();
 const profiles = new Map();
 
 const bansFile = path.join(__dirname, "bans.json");
 const reportsFile = path.join(__dirname, "reports.json");
-const ONE_WEEK = 7 * 24 * 60 * 60 * 1000;
-const BAN_SALT = process.env.BAN_SALT || "vibechat-local-safety-salt";
+
+const FIVE_MINUTES = 5 * 60 * 1000;
+const BAN_SALT = process.env.BAN_SALT || "xlinkvc-local-safety-salt";
 
 function readJson(file, fallback) {
   try {
@@ -95,11 +68,10 @@ function createBan(socket, reason) {
   bans[ipHash] = {
     reason,
     createdAt: Date.now(),
-    expiresAt: Date.now() + ONE_WEEK
+    expiresAt: Date.now() + FIVE_MINUTES
   };
 
   writeJson(bansFile, bans);
-
   return bans[ipHash];
 }
 
@@ -114,7 +86,7 @@ function logReport(data) {
   writeJson(reportsFile, reports.slice(-1000));
 }
 
-function clean(value, fallback, max = 80) {
+function clean(value, fallback, max = 500) {
   return String(value || fallback).slice(0, max);
 }
 
@@ -144,6 +116,7 @@ function matchFilterWorks(a, b) {
 function compatible(aId, bId) {
   const a = profiles.get(aId);
   const b = profiles.get(bId);
+
   if (!a || !b) return false;
 
   return countryWorks(a, b) && matchFilterWorks(a, b);
@@ -192,7 +165,7 @@ function banPartnerOf(socket, reason) {
   if (!partnerSocket) return;
 
   logReport({
-    type: "partner_auto_report",
+    type: "partner_auto_safety_ban",
     reason,
     reporterSocketId: socket.id,
     reporterIpHash: hashIp(getIp(socket)),
@@ -326,6 +299,24 @@ io.on("connection", socket => {
     banPartnerOf(socket, "Possible private-area exposure detected");
   });
 
+  socket.on("safety-language-self", () => {
+    banSocket(socket, "Unsafe racist or sexual-exposure language detected");
+  });
+
+  socket.on("safety-language-partner", () => {
+    banPartnerOf(socket, "Unsafe racist or sexual-exposure language detected");
+  });
+
+    socket.on("media-status", status => {
+    const partnerId = peers.get(socket.id);
+    if (!partnerId) return;
+
+    io.to(partnerId).emit("partner-media-status", {
+      micOn: !!status?.micOn,
+      camOn: !!status?.camOn
+    });
+  });
+
   socket.on("signal", payload => {
     const partnerId = peers.get(socket.id);
     if (!partnerId || payload.to !== partnerId) return;
@@ -358,5 +349,4 @@ const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
   console.log("Xlink.VC running on port " + PORT);
 });
-
 

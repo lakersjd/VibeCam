@@ -186,11 +186,19 @@
             <p>WAITING FOR STRANGER</p>
           </div>
           <div class="videoLabel" id="remoteLabel">STRANGER</div>
+          <div class="media-indicators">
+            <span id="remoteMicIndicator" class="indicator unknown">MIC ?</span>
+            <span id="remoteCamIndicator" class="indicator unknown">CAM ?</span>
+          </div>
         </div>
 
         <div class="videoCard local-card">
           <video id="localVideo" autoplay muted playsinline></video>
           <div class="videoLabel">YOU</div>
+          <div class="media-indicators">
+            <span id="localMicIndicator" class="indicator on">MIC ON</span>
+            <span id="localCamIndicator" class="indicator on">CAM ON</span>
+          </div>
         </div>
       </div>
 
@@ -250,6 +258,7 @@
   <script src="app.js"></script>
 </body>
 </html>
+
 
 
 

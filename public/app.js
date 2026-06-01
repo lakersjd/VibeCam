@@ -21,6 +21,11 @@ const nextBtn = document.getElementById("nextBtn");
 const stopBtn = document.getElementById("stopBtn");
 const micBtn = document.getElementById("micBtn");
 const camBtn = document.getElementById("camBtn");
+
+const localMicIndicator = document.getElementById("localMicIndicator");
+const localCamIndicator = document.getElementById("localCamIndicator");
+const remoteMicIndicator = document.getElementById("remoteMicIndicator");
+const remoteCamIndicator = document.getElementById("remoteCamIndicator");
 const reportBtn = document.getElementById("reportBtn");
 
 const statusText = document.getElementById("statusText");
@@ -160,6 +165,40 @@ function showBanScreen(reason, expiresAt) {
   banScreen.classList.remove("hidden");
 }
 
+function updateMediaIndicators(target, micEnabled, camEnabled) {
+  const mic = target === "local" ? localMicIndicator : remoteMicIndicator;
+  const cam = target === "local" ? localCamIndicator : remoteCamIndicator;
+
+  if (!mic || !cam) return;
+
+  mic.textContent = micEnabled ? "MIC ON" : "MIC OFF";
+  cam.textContent = camEnabled ? "CAM ON" : "CAM OFF";
+
+  mic.className = "indicator " + (micEnabled ? "on" : "off");
+  cam.className = "indicator " + (camEnabled ? "on" : "off");
+}
+
+function resetRemoteMediaIndicators() {
+  if (!remoteMicIndicator || !remoteCamIndicator) return;
+
+  remoteMicIndicator.textContent = "MIC ?";
+  remoteCamIndicator.textContent = "CAM ?";
+  remoteMicIndicator.className = "indicator unknown";
+  remoteCamIndicator.className = "indicator unknown";
+}
+
+function emitMediaStatus() {
+  if (!partnerId) return;
+
+  socket.emit("media-status", {
+    micOn,
+    camOn
+  });
+}
+
+updateMediaIndicators("local", micOn, camOn);
+resetRemoteMediaIndicators();
+
 async function startCamera() {
   if (localStream) return;
 
@@ -199,6 +238,9 @@ function applyMediaToggles() {
 
   setSafetyText(micSafety, micOn ? "MIC: RACISM CHECK" : "MIC: OFF", micOn ? "safe" : "warn");
   setSafetyText(cameraSafety, camOn ? "CAMERA: SCANNING" : "CAMERA: OFF", camOn ? "safe" : "warn");
+
+  updateMediaIndicators("local", micOn, camOn);
+  emitMediaStatus();
 }
 
 function privateAreaScore(videoElement) {
@@ -391,6 +433,7 @@ function cleanupCall() {
   remoteLabel.textContent = "STRANGER";
   sendBtn.disabled = true;
   reportBtn.disabled = true;
+  resetRemoteMediaIndicators();
 }
 
 async function joinQueue() {
@@ -451,6 +494,7 @@ async function handleMatched(data) {
 
   sendBtn.disabled = false;
   reportBtn.disabled = false;
+  emitMediaStatus();
 
   messages.innerHTML = "";
   addSystem("MATCHED.");
@@ -582,6 +626,10 @@ socket.on("chat-message", payload => {
   addMessage(payload.text, false);
 });
 
+socket.on("partner-media-status", status => {
+  updateMediaIndicators("remote", !!status?.micOn, !!status?.camOn);
+});
+
 socket.on("partner-left", () => {
   cleanupCall();
 
@@ -599,6 +647,7 @@ socket.on("banned", data => {
 socket.on("stopped", () => {
   setStatus("Stopped", "", "");
 });
+
 
 
 
