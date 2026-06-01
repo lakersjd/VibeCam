@@ -905,3 +905,33 @@ select option:checked {
 .pixel-face {
   border-radius: 12px;
 }
+
+/* Less rounded landing page corners */
+.landing-nav,
+.age-box,
+.hero-age-box,
+.preview-window,
+.preview-video,
+.info-box,
+.socials-box,
+.ban-card {
+  border-radius: 12px;
+}
+
+.nav-enter-btn,
+.enter-btn,
+.discord-only-link,
+.landing-nav-links,
+.landing-nav-links a,
+.hero-badge {
+  border-radius: 10px;
+}
+
+.preview-top span {
+  border-radius: 4px;
+}
+
+.landing-mini-logo,
+.landing-logo {
+  border-radius: 10px;
+}
