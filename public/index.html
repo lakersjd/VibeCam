@@ -8,50 +8,103 @@
 </head>
 <body>
 
-  <section id="landingPage" class="landing-page">
-    <div class="landing-card">
-      <div class="landing-logo">VC</div>
-      <h1>VibeChat</h1>
-      <p class="landing-subtitle">A safety-first random video chat with a dark 8-bit style.</p>
+    <section id="landingPage" class="landing-page">
+    <div class="landing-shell">
+      <nav class="landing-nav">
+        <div class="landing-brand">
+          <div class="landing-mini-logo">VC</div>
+          <span>VibeChat</span>
+        </div>
 
-      <div class="age-box">
-        <h2>18+ SAFETY GATE</h2>
-        <p>You must be 18 or older to use VibeChat.</p>
-        <p>VibeChat does not record video calls.</p>
+        <div class="landing-nav-links">
+          <a href="#aboutBox">About</a>
+          <a href="#rulesBox">Rules</a>
+          <a href="https://discord.gg/Y8K54y2q" target="_blank" rel="noopener noreferrer">Discord</a>
+        </div>
 
-        <label class="check-line">
-          <input id="ageCheck" type="checkbox" />
-          <span>I confirm I am 18+ and I agree to follow the rules.</span>
-        </label>
-      </div>
+        <button id="enterChatBtn" class="nav-enter-btn">Enter</button>
+      </nav>
 
-      <div class="info-grid">
-        <div class="info-box">
-          <h2>WHAT IS IT?</h2>
-          <p>VibeChat lets users connect live with random strangers, talk, skip, and leave anytime.</p>
+      <div class="hero-badge">✦ Safer random video chat</div>
+
+      <section class="landing-hero">
+        <h1>Meet strangers with a safer vibe.</h1>
+        <p>
+          VibeChat is a random live video chat built with safety tools,
+          reports, temporary bans, and a clean dark 8-bit style.
+        </p>
+
+        <div class="age-box hero-age-box">
+          <h2>18+ SAFETY GATE</h2>
+          <p>You must be 18 or older to use VibeChat.</p>
+          <p>VibeChat does not record video calls.</p>
+
+          <label class="check-line">
+            <input id="ageCheck" type="checkbox" />
+            <span>I confirm I am 18+ and I agree to follow the rules.</span>
+          </label>
+
+          <p id="enterWarning" class="enter-warning"></p>
+        </div>
+      </section>
+
+      <section class="landing-preview">
+        <div class="preview-window">
+          <div class="preview-top">
+            <span></span>
+            <span></span>
+            <span></span>
+          </div>
+
+          <div class="preview-content">
+            <aside class="preview-sidebar">
+              <p>FILTERS</p>
+              <div></div>
+              <div></div>
+              <p>CHAT LOG</p>
+              <div class="short"></div>
+              <div class="short"></div>
+              <div class="short"></div>
+            </aside>
+
+            <main class="preview-main">
+              <div class="preview-video left-preview">
+                <span>STRANGER</span>
+              </div>
+              <div class="preview-video right-preview">
+                <span>YOU</span>
+              </div>
+            </main>
+          </div>
+        </div>
+      </section>
+
+      <section class="info-grid landing-info-grid">
+        <div class="info-box" id="aboutBox">
+          <h2>WHAT IS VIBECHAT?</h2>
+          <p>Connect live with random people, talk, skip, report, or stop anytime.</p>
         </div>
 
         <div class="info-box">
           <h2>SAFETY SYSTEM</h2>
           <p>Possible private-area exposure can trigger a temporary safety ban.</p>
-          <p>Chat and mic moderation checks for racist language.</p>
-          <p>Reports are logged for safety review.</p>
+          <p>Racist chat and mic language is blocked or flagged.</p>
+        </div>
+
+        <div class="info-box" id="rulesBox">
+          <h2>WHAT TO DO</h2>
+          <p>Be respectful. Keep your camera clean. Use REPORT for unsafe behavior.</p>
         </div>
 
         <div class="info-box">
-          <h2>DO THIS</h2>
-          <p>Be respectful.</p>
-          <p>Keep your camera clean.</p>
-          <p>Use REPORT for unsafe behavior.</p>
-          <p>Use NEXT or STOP whenever needed.</p>
+          <h2>WHAT NOT TO DO</h2>
+          <p>Do not expose yourself, harass people, share private info, or use racist language.</p>
         </div>
 
         <div class="info-box">
-          <h2>DO NOT DO THIS</h2>
-          <p>Do not share private info.</p>
-          <p>Do not expose private areas.</p>
-          <p>Do not harass people.</p>
-          <p>Do not use racist language.</p>
+          <h2>DISCORD</h2>
+          <p>Join the VibeChat community server.</p>
+          <a class="discord-only-link" href="https://discord.gg/Y8K54y2q" target="_blank" rel="noopener noreferrer">JOIN DISCORD</a>
         </div>
 
         <div class="info-box">
@@ -59,16 +112,7 @@
           <p>Built with help from AI.</p>
           <p>Created by Random_E556.</p>
         </div>
-      </div>
-
-                  <div class="socials-box">
-        <h2>SOCIALS</h2>
-        <div class="social-links">
-          <a href="https://discord.gg/Y8K54y2q" target="_blank" rel="noopener noreferrer">DISCORD</a>
-        </div>
-      </div>
-      <p id="enterWarning" class="enter-warning"></p>
-      <button id="enterChatBtn" class="enter-btn">ENTER VIBECHAT</button>
+      </section>
     </div>
   </section>
 
@@ -212,5 +256,6 @@
   <script src="app.js"></script>
 </body>
 </html>
+
 
 
