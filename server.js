@@ -6,6 +6,7 @@ const crypto = require("crypto");
 const helmet = require("helmet");
 const rateLimit = require("express-rate-limit");
 const hpp = require("hpp");
+const { Pool } = require("pg");
 const { Server } = require("socket.io");
 
 const app = express();
@@ -63,10 +64,7 @@ app.use((req, res, next) => {
 });
 
 app.use(hpp());
-
-app.use(express.json({
-  limit: "20kb"
-}));
+app.use(express.json({ limit: "20kb" }));
 
 const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -107,6 +105,13 @@ const FIVE_MINUTES = 5 * 60 * 1000;
 const SIGNAL_WINDOW = 10 * 60 * 1000;
 const BAN_SALT = process.env.BAN_SALT || "xlinkvc-local-safety-salt";
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "";
+
+const pool = process.env.DATABASE_URL
+  ? new Pool({
+      connectionString: process.env.DATABASE_URL,
+      ssl: process.env.NODE_ENV === "production" ? { rejectUnauthorized: false } : false
+    })
+  : null;
 
 const unsafePatterns = [
   "\u006e\u0069\u0067\u0067\u0065\u0072",
@@ -155,6 +160,41 @@ const unsafePatterns = [
   "show my passport"
 ];
 
+async function initDatabase() {
+  if (!pool) {
+    console.log("DATABASE_URL not set. Using local JSON fallback.");
+    return;
+  }
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS safety_bans (
+      ip_hash TEXT PRIMARY KEY,
+      reason TEXT NOT NULL,
+      created_at BIGINT NOT NULL,
+      expires_at BIGINT NOT NULL
+    )
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS safety_reports (
+      id SERIAL PRIMARY KEY,
+      type TEXT,
+      reason TEXT,
+      reporter_socket_id TEXT,
+      reported_socket_id TEXT,
+      user_socket_id TEXT,
+      reporter_ip_hash TEXT,
+      reported_ip_hash TEXT,
+      user_ip_hash TEXT,
+      signal_count INTEGER,
+      expires_at BIGINT,
+      created_at BIGINT NOT NULL
+    )
+  `);
+
+  console.log("Database ready.");
+}
+
 function readJson(file, fallback) {
   try {
     if (!fs.existsSync(file)) return fallback;
@@ -183,7 +223,6 @@ function safeCompare(a, b) {
   const two = Buffer.from(String(b || ""));
 
   if (one.length !== two.length) return false;
-
   return crypto.timingSafeEqual(one, two);
 }
 
@@ -241,14 +280,37 @@ function socketLimit(socket, key, max, windowMs) {
   return true;
 }
 
-function isBanned(socket) {
-  const ipHash = hashIp(getIp(socket));
+async function getBanByIpHash(ipHash) {
+  const now = Date.now();
+
+  if (pool) {
+    const result = await pool.query(
+      "SELECT ip_hash, reason, created_at, expires_at FROM safety_bans WHERE ip_hash = $1",
+      [ipHash]
+    );
+
+    const ban = result.rows[0];
+    if (!ban) return null;
+
+    if (now > Number(ban.expires_at)) {
+      await pool.query("DELETE FROM safety_bans WHERE ip_hash = $1", [ipHash]);
+      return null;
+    }
+
+    return {
+      ipHash: ban.ip_hash,
+      reason: ban.reason,
+      createdAt: Number(ban.created_at),
+      expiresAt: Number(ban.expires_at)
+    };
+  }
+
   const bans = readJson(bansFile, {});
   const ban = bans[ipHash];
 
   if (!ban) return null;
 
-  if (Date.now() > ban.expiresAt) {
+  if (now > ban.expiresAt) {
     delete bans[ipHash];
     writeJson(bansFile, bans);
     return null;
@@ -257,29 +319,158 @@ function isBanned(socket) {
   return ban;
 }
 
-function createBan(socket, reason) {
+async function isBanned(socket) {
   const ipHash = hashIp(getIp(socket));
-  const bans = readJson(bansFile, {});
+  return await getBanByIpHash(ipHash);
+}
 
-  bans[ipHash] = {
+async function createBan(socket, reason) {
+  const ipHash = hashIp(getIp(socket));
+  const ban = {
     reason,
     createdAt: Date.now(),
     expiresAt: Date.now() + FIVE_MINUTES
   };
 
-  writeJson(bansFile, bans);
-  return bans[ipHash];
+  if (pool) {
+    await pool.query(
+      `
+      INSERT INTO safety_bans (ip_hash, reason, created_at, expires_at)
+      VALUES ($1, $2, $3, $4)
+      ON CONFLICT (ip_hash)
+      DO UPDATE SET reason = EXCLUDED.reason, created_at = EXCLUDED.created_at, expires_at = EXCLUDED.expires_at
+      `,
+      [ipHash, ban.reason, ban.createdAt, ban.expiresAt]
+    );
+  } else {
+    const bans = readJson(bansFile, {});
+    bans[ipHash] = ban;
+    writeJson(bansFile, bans);
+  }
+
+  return ban;
 }
 
-function logReport(data) {
-  const reports = readJson(reportsFile, []);
-
-  reports.push({
-    ...data,
+async function logReport(data) {
+  const report = {
+    type: data.type || "report",
+    reason: clean(data.reason, "", 500),
+    reporterSocketId: data.reporterSocketId || null,
+    reportedSocketId: data.reportedSocketId || null,
+    userSocketId: data.userSocketId || null,
+    reporterIpHash: data.reporterIpHash || null,
+    reportedIpHash: data.reportedIpHash || null,
+    userIpHash: data.userIpHash || null,
+    signalCount: Number(data.signalCount || 0),
+    expiresAt: data.expiresAt || null,
     createdAt: Date.now()
-  });
+  };
 
-  writeJson(reportsFile, reports.slice(-1000));
+  if (pool) {
+    await pool.query(
+      `
+      INSERT INTO safety_reports
+      (type, reason, reporter_socket_id, reported_socket_id, user_socket_id, reporter_ip_hash, reported_ip_hash, user_ip_hash, signal_count, expires_at, created_at)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+      `,
+      [
+        report.type,
+        report.reason,
+        report.reporterSocketId,
+        report.reportedSocketId,
+        report.userSocketId,
+        report.reporterIpHash,
+        report.reportedIpHash,
+        report.userIpHash,
+        report.signalCount,
+        report.expiresAt,
+        report.createdAt
+      ]
+    );
+  } else {
+    const reports = readJson(reportsFile, []);
+    reports.push(report);
+    writeJson(reportsFile, reports.slice(-1000));
+  }
+}
+
+async function getActiveBans() {
+  const now = Date.now();
+
+  if (pool) {
+    await pool.query("DELETE FROM safety_bans WHERE expires_at < $1", [now]);
+
+    const result = await pool.query(
+      "SELECT ip_hash, reason, created_at, expires_at FROM safety_bans ORDER BY created_at DESC"
+    );
+
+    return result.rows.map(row => ({
+      ipHash: row.ip_hash,
+      reason: row.reason,
+      createdAt: Number(row.created_at),
+      expiresAt: Number(row.expires_at)
+    }));
+  }
+
+  const bans = readJson(bansFile, {});
+  return Object.entries(bans)
+    .filter(([_, ban]) => now < ban.expiresAt)
+    .map(([ipHash, ban]) => ({ ipHash, ...ban }))
+    .sort((a, b) => b.createdAt - a.createdAt);
+}
+
+async function getReports() {
+  if (pool) {
+    const result = await pool.query(
+      `
+      SELECT * FROM safety_reports
+      ORDER BY created_at DESC
+      LIMIT 100
+      `
+    );
+
+    return result.rows.map(row => ({
+      type: row.type,
+      reason: row.reason,
+      reporterSocketId: row.reporter_socket_id,
+      reportedSocketId: row.reported_socket_id,
+      userSocketId: row.user_socket_id,
+      reporterIpHash: row.reporter_ip_hash,
+      reportedIpHash: row.reported_ip_hash,
+      userIpHash: row.user_ip_hash,
+      signalCount: row.signal_count,
+      expiresAt: row.expires_at ? Number(row.expires_at) : null,
+      createdAt: Number(row.created_at)
+    }));
+  }
+
+  const reports = readJson(reportsFile, []);
+  return reports.slice(-100).reverse();
+}
+
+async function removeBan(ipHash) {
+  if (pool) {
+    const result = await pool.query("DELETE FROM safety_bans WHERE ip_hash = $1", [ipHash]);
+    return result.rowCount > 0;
+  }
+
+  const bans = readJson(bansFile, {});
+  if (bans[ipHash]) {
+    delete bans[ipHash];
+    writeJson(bansFile, bans);
+    return true;
+  }
+
+  return false;
+}
+
+async function clearReports() {
+  if (pool) {
+    await pool.query("DELETE FROM safety_reports");
+    return;
+  }
+
+  writeJson(reportsFile, []);
 }
 
 function adminAuth(req, res, next) {
@@ -353,10 +544,10 @@ function endPair(id) {
   if (partnerSocket) partnerSocket.emit("partner-left");
 }
 
-function banSocket(socket, reason) {
-  const ban = createBan(socket, reason);
+async function banSocket(socket, reason) {
+  const ban = await createBan(socket, reason);
 
-  logReport({
+  await logReport({
     type: "temporary_safety_ban",
     reason,
     userSocketId: socket.id,
@@ -375,7 +566,7 @@ function banSocket(socket, reason) {
   socket.disconnect(true);
 }
 
-function recordPartnerSafetySignal(socket, reason) {
+async function recordPartnerSafetySignal(socket, reason) {
   const partnerId = peers.get(socket.id);
   if (!partnerId) return;
 
@@ -399,7 +590,7 @@ function recordPartnerSafetySignal(socket, reason) {
 
   partnerSafetySignals.set(reportedHash, freshSignals);
 
-  logReport({
+  await logReport({
     type: "client_safety_signal",
     reason,
     reporterSocketId: socket.id,
@@ -410,17 +601,17 @@ function recordPartnerSafetySignal(socket, reason) {
   });
 
   endPair(socket.id);
-  enqueue(socket);
+  await enqueue(socket);
 
   if (freshSignals.length >= 2) {
-    banSocket(partnerSocket, reason);
+    await banSocket(partnerSocket, reason);
   }
 }
 
-function enqueue(socket) {
+async function enqueue(socket) {
   if (!socket || peers.has(socket.id) || queue.includes(socket.id)) return;
 
-  const ban = isBanned(socket);
+  const ban = await isBanned(socket);
 
   if (ban) {
     socket.emit("banned", {
@@ -439,10 +630,10 @@ function enqueue(socket) {
     waiting: queue.length
   });
 
-  matchUsers();
+  await matchUsers();
 }
 
-function matchUsers() {
+async function matchUsers() {
   for (let i = 0; i < queue.length; i++) {
     const aId = queue[i];
 
@@ -458,9 +649,9 @@ function matchUsers() {
       const b = io.sockets.sockets.get(bId);
 
       if (!a || !b) {
-        if (a) enqueue(a);
-        if (b) enqueue(b);
-        return matchUsers();
+        if (a) await enqueue(a);
+        if (b) await enqueue(b);
+        return await matchUsers();
       }
 
       peers.set(a.id, b.id);
@@ -478,27 +669,22 @@ function matchUsers() {
         partner: profiles.get(a.id)
       });
 
-      return matchUsers();
+      return await matchUsers();
     }
   }
 }
 
 app.get("/healthz", (req, res) => {
-  res.json({ ok: true });
+  res.json({ ok: true, database: pool ? "postgres" : "json" });
 });
 
 app.get("/admin", adminAuth, (req, res) => {
   res.sendFile(path.join(__dirname, "admin", "admin.html"));
 });
 
-app.get("/api/admin/stats", adminAuth, (req, res) => {
-  const bans = readJson(bansFile, {});
-  const reports = readJson(reportsFile, []);
-
-  const activeBans = Object.entries(bans)
-    .filter(([_, ban]) => Date.now() < ban.expiresAt)
-    .map(([ipHash, ban]) => ({ ipHash, ...ban }))
-    .sort((a, b) => b.createdAt - a.createdAt);
+app.get("/api/admin/stats", adminAuth, async (req, res) => {
+  const activeBans = await getActiveBans();
+  const reports = await getReports();
 
   res.json({
     activeUsers: io.engine.clientsCount,
@@ -506,25 +692,21 @@ app.get("/api/admin/stats", adminAuth, (req, res) => {
     matchedPairs: peers.size / 2,
     profiles: Array.from(profiles.values()),
     activeBans,
-    reports: reports.slice(-100).reverse()
+    reports
   });
 });
 
-app.post("/api/admin/unban", adminAuth, (req, res) => {
+app.post("/api/admin/unban", adminAuth, async (req, res) => {
   const ipHash = String(req.body?.ipHash || "");
-  const bans = readJson(bansFile, {});
+  const ok = await removeBan(ipHash);
 
-  if (bans[ipHash]) {
-    delete bans[ipHash];
-    writeJson(bansFile, bans);
-    return res.json({ ok: true });
-  }
+  if (ok) return res.json({ ok: true });
 
   res.status(404).json({ ok: false, error: "Ban not found" });
 });
 
-app.post("/api/admin/clear-reports", adminAuth, (req, res) => {
-  writeJson(reportsFile, []);
+app.post("/api/admin/clear-reports", adminAuth, async (req, res) => {
+  await clearReports();
   res.json({ ok: true });
 });
 
@@ -535,7 +717,7 @@ app.use(express.static("public", {
   index: "index.html"
 }));
 
-io.on("connection", socket => {
+io.on("connection", async socket => {
   const origin = socket.handshake.headers.origin;
 
   if (!isOriginAllowed(origin)) {
@@ -543,7 +725,7 @@ io.on("connection", socket => {
     return;
   }
 
-  const ban = isBanned(socket);
+  const ban = await isBanned(socket);
 
   if (ban) {
     socket.emit("banned", {
@@ -555,20 +737,20 @@ io.on("connection", socket => {
     return;
   }
 
-  socket.on("join", profile => {
+  socket.on("join", async profile => {
     if (!socketLimit(socket, "join", 20, 60 * 1000)) return;
 
     saveProfile(socket, profile);
     endPair(socket.id);
-    enqueue(socket);
+    await enqueue(socket);
   });
 
-  socket.on("next", profile => {
+  socket.on("next", async profile => {
     if (!socketLimit(socket, "next", 30, 60 * 1000)) return;
 
     saveProfile(socket, profile);
     endPair(socket.id);
-    enqueue(socket);
+    await enqueue(socket);
   });
 
   socket.on("stop", () => {
@@ -579,13 +761,13 @@ io.on("connection", socket => {
     socket.emit("stopped");
   });
 
-  socket.on("report-partner", reason => {
+  socket.on("report-partner", async reason => {
     if (!socketLimit(socket, "report", 8, 5 * 60 * 1000)) return;
 
     const partnerId = peers.get(socket.id);
     const partnerSocket = partnerId ? io.sockets.sockets.get(partnerId) : null;
 
-    logReport({
+    await logReport({
       type: "manual_report",
       reason: clean(reason, "No reason", 300),
       reporterSocketId: socket.id,
@@ -595,31 +777,31 @@ io.on("connection", socket => {
     });
 
     endPair(socket.id);
-    enqueue(socket);
+    await enqueue(socket);
   });
 
-  socket.on("safety-exposure-self", () => {
+  socket.on("safety-exposure-self", async () => {
     if (!socketLimit(socket, "safety-self", 5, 60 * 1000)) return;
 
-    banSocket(socket, "Possible private-area exposure detected");
+    await banSocket(socket, "Possible private-area exposure detected");
   });
 
-  socket.on("safety-exposure-partner", () => {
+  socket.on("safety-exposure-partner", async () => {
     if (!socketLimit(socket, "safety-partner", 5, 60 * 1000)) return;
 
-    recordPartnerSafetySignal(socket, "Possible private-area exposure detected");
+    await recordPartnerSafetySignal(socket, "Possible private-area exposure detected");
   });
 
-  socket.on("safety-language-self", () => {
+  socket.on("safety-language-self", async () => {
     if (!socketLimit(socket, "safety-language-self", 5, 60 * 1000)) return;
 
-    banSocket(socket, "Unsafe racist or sexual-exposure language detected");
+    await banSocket(socket, "Unsafe racist or sexual-exposure language detected");
   });
 
-  socket.on("safety-language-partner", () => {
+  socket.on("safety-language-partner", async () => {
     if (!socketLimit(socket, "safety-language-partner", 5, 60 * 1000)) return;
 
-    recordPartnerSafetySignal(socket, "Unsafe racist or sexual-exposure language detected");
+    await recordPartnerSafetySignal(socket, "Unsafe racist or sexual-exposure language detected");
   });
 
   socket.on("media-status", status => {
@@ -646,13 +828,13 @@ io.on("connection", socket => {
     });
   });
 
-  socket.on("chat-message", message => {
+  socket.on("chat-message", async message => {
     if (!socketLimit(socket, "chat", 40, 60 * 1000)) return;
 
     const text = clean(message, "", 500);
 
     if (containsUnsafeLanguage(text)) {
-      banSocket(socket, "Unsafe racist or sexual-exposure language detected");
+      await banSocket(socket, "Unsafe racist or sexual-exposure language detected");
       return;
     }
 
@@ -680,6 +862,13 @@ io.on("connection", socket => {
 
 const PORT = process.env.PORT || 3000;
 
-server.listen(PORT, () => {
-  console.log("Xlink.VC running on port " + PORT);
-});
+initDatabase()
+  .then(() => {
+    server.listen(PORT, () => {
+      console.log("Xlink.VC running on port " + PORT);
+    });
+  })
+  .catch(error => {
+    console.error("Database startup failed:", error);
+    process.exit(1);
+  });
