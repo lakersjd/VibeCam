@@ -440,6 +440,44 @@ function createPeer() {
   };
 }
 
+function stopLocalMedia() {
+  if (cameraScanTimer) {
+    clearInterval(cameraScanTimer);
+    cameraScanTimer = null;
+  }
+
+  if (speechRecognition) {
+    try {
+      speechRecognition.stop();
+    } catch (error) {}
+    speechRecognition = null;
+  }
+
+  if (localStream) {
+    localStream.getTracks().forEach(track => {
+      track.stop();
+    });
+
+    localStream = null;
+  }
+
+  localVideo.srcObject = null;
+
+  micOn = true;
+  camOn = true;
+
+  micBtn.disabled = true;
+  camBtn.disabled = true;
+
+  micBtn.classList.remove("off");
+  camBtn.classList.remove("off");
+
+  updateMediaIndicators("local", false, false);
+
+  setSafetyText(cameraSafety, "CAMERA: OFF", "warn");
+  setSafetyText(micSafety, "MIC: OFF", "warn");
+}
+
 function cleanupCall() {
   if (peer) {
     peer.close();
@@ -495,9 +533,15 @@ function stopMatching() {
   socket.emit("stop");
 
   cleanupCall();
+  stopLocalMedia();
+
   started = false;
+  partnerId = null;
 
   stopBtn.disabled = true;
+  sendBtn.disabled = true;
+  reportBtn.disabled = true;
+
   setStatus("Stopped", "", "");
   messages.innerHTML = "";
 }
@@ -666,6 +710,7 @@ socket.on("banned", data => {
 socket.on("stopped", () => {
   setStatus("Stopped", "", "");
 });
+
 
 
 
