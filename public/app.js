@@ -165,14 +165,32 @@ function showBanScreen(reason, expiresAt) {
   banScreen.classList.remove("hidden");
 }
 
+function micIcon() {
+  return `
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M12 14C13.66 14 15 12.66 15 11V5C15 3.34 13.66 2 12 2C10.34 2 9 3.34 9 5V11C9 12.66 10.34 14 12 14Z"></path>
+      <path d="M17 11C17 13.76 14.76 16 12 16C9.24 16 7 13.76 7 11H5C5 14.53 7.61 17.43 11 17.92V21H13V17.92C16.39 17.43 19 14.53 19 11H17Z"></path>
+    </svg>
+  `;
+}
+
+function camIcon() {
+  return `
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M3 7C3 5.9 3.9 5 5 5H14C15.1 5 16 5.9 16 7V17C16 18.1 15.1 19 14 19H5C3.9 19 3 18.1 3 17V7Z"></path>
+      <path d="M17 10L22 7V17L17 14V10Z"></path>
+    </svg>
+  `;
+}
+
 function updateMediaIndicators(target, micEnabled, camEnabled) {
   const mic = target === "local" ? localMicIndicator : remoteMicIndicator;
   const cam = target === "local" ? localCamIndicator : remoteCamIndicator;
 
   if (!mic || !cam) return;
 
-  mic.textContent = micEnabled ? "MIC ON" : "MIC OFF";
-  cam.textContent = camEnabled ? "CAM ON" : "CAM OFF";
+  mic.innerHTML = micIcon() + `<span>${micEnabled ? "ON" : "OFF"}</span>`;
+  cam.innerHTML = camIcon() + `<span>${camEnabled ? "ON" : "OFF"}</span>`;
 
   mic.className = "indicator " + (micEnabled ? "on" : "off");
   cam.className = "indicator " + (camEnabled ? "on" : "off");
@@ -181,8 +199,9 @@ function updateMediaIndicators(target, micEnabled, camEnabled) {
 function resetRemoteMediaIndicators() {
   if (!remoteMicIndicator || !remoteCamIndicator) return;
 
-  remoteMicIndicator.textContent = "MIC ?";
-  remoteCamIndicator.textContent = "CAM ?";
+  remoteMicIndicator.innerHTML = micIcon() + "<span>?</span>";
+  remoteCamIndicator.innerHTML = camIcon() + "<span>?</span>";
+
   remoteMicIndicator.className = "indicator unknown";
   remoteCamIndicator.className = "indicator unknown";
 }
@@ -647,6 +666,7 @@ socket.on("banned", data => {
 socket.on("stopped", () => {
   setStatus("Stopped", "", "");
 });
+
 
 
 
