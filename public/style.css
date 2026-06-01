@@ -13,6 +13,7 @@
   --white: #ffffff;
   --red: #b00000;
   --red-dark: #650000;
+  --yellow: #d6a800;
 }
 
 body {
@@ -24,7 +25,9 @@ body {
   overflow: hidden;
 }
 
-/* LANDING PAGE */
+#safetyCanvas {
+  display: none;
+}
 
 .landing-page {
   position: fixed;
@@ -106,8 +109,6 @@ body {
   width: 100%;
   max-width: 360px;
 }
-
-/* MAIN APP */
 
 .app {
   width: 100vw;
@@ -225,8 +226,6 @@ p {
   100% { background: var(--gray); }
 }
 
-/* EQUAL SIDE-BY-SIDE VIDEO FRAMES */
-
 .video-zone {
   width: 100%;
   height: 100%;
@@ -316,8 +315,6 @@ p {
   margin-bottom: 14px;
 }
 
-/* CONTROLS */
-
 .control-bar {
   border: 1px solid var(--gray);
   background: var(--dark);
@@ -365,7 +362,7 @@ button:disabled {
   fill: currentColor;
 }
 
-.home-button, .refresh-button {
+.home-button {
   width: 46px;
   height: 46px;
   background: #000;
@@ -393,14 +390,12 @@ button:disabled {
   background: var(--red-dark);
 }
 
-/* SIDE PANEL */
-
 .side-panel {
   border-left: 1px solid var(--gray);
   background: var(--dark);
   padding: 14px;
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-rows: auto auto minmax(0, 1fr);
   gap: 12px;
   min-height: 0;
   overflow: hidden;
@@ -412,6 +407,23 @@ button:disabled {
   padding: 14px;
   box-shadow: 3px 3px 0 #000;
   min-width: 0;
+}
+
+.maturity-box p {
+  font-size: 8px;
+  color: var(--light-gray);
+}
+
+.maturity-box .safe {
+  color: var(--white);
+}
+
+.maturity-box .warn {
+  color: var(--yellow);
+}
+
+.maturity-box .danger {
+  color: var(--red);
 }
 
 label {
@@ -496,8 +508,6 @@ select:focus {
   padding-right: 6px;
 }
 
-/* MOBILE */
-
 @media (max-width: 1000px) {
   body {
     overflow: auto;
@@ -533,7 +543,7 @@ select:focus {
   .side-panel {
     border-left: none;
     border-top: 1px solid var(--gray);
-    min-height: 520px;
+    min-height: 700px;
   }
 
   .control-bar {
@@ -544,4 +554,3 @@ select:focus {
     grid-template-columns: 1fr;
   }
 }
-

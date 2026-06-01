@@ -3,20 +3,6 @@ const socket = io();
 const landingPage = document.getElementById("landingPage");
 const enterChatBtn = document.getElementById("enterChatBtn");
 const homeBtn = document.getElementById("homeBtn");
-const refreshBtn = document.getElementById("refreshBtn");
-
-function setSavedPage(page) {
-  localStorage.setItem("vibechat_page", page);
-
-  if (page === "chat") {
-    landingPage.classList.add("hidden");
-  } else {
-    landingPage.classList.remove("hidden");
-  }
-}
-
-const savedPage = localStorage.getItem("vibechat_page") || "landing";
-setSavedPage(savedPage);
 
 const localVideo = document.getElementById("localVideo");
 const remoteVideo = document.getElementById("remoteVideo");
@@ -39,18 +25,54 @@ const messages = document.getElementById("messages");
 const messageInput = document.getElementById("messageInput");
 const sendBtn = document.getElementById("sendBtn");
 
+const safetyCanvas = document.getElementById("safetyCanvas");
+const safetyCtx = safetyCanvas.getContext("2d", { willReadFrequently: true });
+
+const cameraSafety = document.getElementById("cameraSafety");
+const micSafety = document.getElementById("micSafety");
+const warningCount = document.getElementById("warningCount");
+
 let localStream = null;
 let peer = null;
 let partnerId = null;
 let started = false;
 let micOn = true;
 let camOn = true;
+let warnings = 0;
+let cameraScanTimer = null;
+let speechRecognition = null;
+
+const bannedWords = [
+  "fuck you",
+  "kill yourself",
+  "kys",
+  "nigger",
+  "faggot",
+  "bitch",
+  "slut",
+  "whore",
+  "rape",
+  "terrorist"
+];
 
 const rtcConfig = {
   iceServers: [
     { urls: "stun:stun.l.google.com:19302" }
   ]
 };
+
+function setSavedPage(page) {
+  localStorage.setItem("vibechat_page", page);
+
+  if (page === "chat") {
+    landingPage.classList.add("hidden");
+  } else {
+    landingPage.classList.remove("hidden");
+  }
+}
+
+const savedPage = localStorage.getItem("vibechat_page") || "landing";
+setSavedPage(savedPage);
 
 function getProfile() {
   return {
@@ -65,6 +87,28 @@ function setStatus(title, detail, mode) {
 
   statusDot.className = "statusDot";
   if (mode) statusDot.classList.add(mode);
+}
+
+function setSafetyText(element, text, level) {
+  element.textContent = text;
+  element.className = level || "";
+}
+
+function addWarning(reason) {
+  warnings += 1;
+  warningCount.textContent = "WARNINGS: " + warnings;
+  warningCount.className = warnings >= 3 ? "danger" : "warn";
+  addSystem("SAFETY WARNING: " + reason);
+
+  if (warnings >= 3) {
+    stopMatching();
+    addSystem("SAFER MODE STOPPED THE SESSION.");
+  }
+}
+
+function containsBadWords(text) {
+  const lower = String(text || "").toLowerCase();
+  return bannedWords.some(word => lower.includes(word));
 }
 
 function addSystem(text) {
@@ -97,6 +141,12 @@ async function startCamera() {
   localVideo.srcObject = localStream;
   micBtn.disabled = false;
   camBtn.disabled = false;
+
+  setSafetyText(cameraSafety, "CAMERA: SCANNING", "safe");
+  setSafetyText(micSafety, "MIC: SCANNING", "safe");
+
+  startCameraSafetyScan();
+  startMicSafetyScan();
 }
 
 function applyMediaToggles() {
@@ -112,6 +162,105 @@ function applyMediaToggles() {
 
   micBtn.classList.toggle("off", !micOn);
   camBtn.classList.toggle("off", !camOn);
+
+  setSafetyText(micSafety, micOn ? "MIC: SCANNING" : "MIC: OFF", micOn ? "safe" : "warn");
+  setSafetyText(cameraSafety, camOn ? "CAMERA: SCANNING" : "CAMERA: OFF", camOn ? "safe" : "warn");
+}
+
+function startCameraSafetyScan() {
+  if (cameraScanTimer) clearInterval(cameraScanTimer);
+
+  cameraScanTimer = setInterval(() => {
+    if (!localVideo.videoWidth || !camOn) return;
+
+    safetyCtx.drawImage(localVideo, 0, 0, safetyCanvas.width, safetyCanvas.height);
+
+    const frame = safetyCtx.getImageData(0, 0, safetyCanvas.width, safetyCanvas.height);
+    const data = frame.data;
+
+    let skinLike = 0;
+    let bright = 0;
+    let total = data.length / 4;
+
+    for (let i = 0; i < data.length; i += 4) {
+      const r = data[i];
+      const g = data[i + 1];
+      const b = data[i + 2];
+
+      const max = Math.max(r, g, b);
+      const min = Math.min(r, g, b);
+
+      if (r > 95 && g > 40 && b > 20 && max - min > 15 && r > g && r > b) {
+        skinLike++;
+      }
+
+      if ((r + g + b) / 3 > 210) {
+        bright++;
+      }
+    }
+
+    const skinRatio = skinLike / total;
+    const brightRatio = bright / total;
+
+    if (skinRatio > 0.62 && brightRatio < 0.75) {
+      setSafetyText(cameraSafety, "CAMERA: POSSIBLE EXPOSURE", "danger");
+      addWarning("Possible camera exposure detected.");
+    } else {
+      setSafetyText(cameraSafety, "CAMERA: CLEAR", "safe");
+    }
+  }, 3500);
+}
+
+function startMicSafetyScan() {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+  if (!SpeechRecognition) {
+    setSafetyText(micSafety, "MIC: SPEECH CHECK NOT SUPPORTED", "warn");
+    return;
+  }
+
+  if (speechRecognition) {
+    speechRecognition.stop();
+    speechRecognition = null;
+  }
+
+  speechRecognition = new SpeechRecognition();
+  speechRecognition.continuous = true;
+  speechRecognition.interimResults = true;
+  speechRecognition.lang = "en-US";
+
+  speechRecognition.onresult = event => {
+    let transcript = "";
+
+    for (let i = event.resultIndex; i < event.results.length; i++) {
+      transcript += event.results[i][0].transcript + " ";
+    }
+
+    if (containsBadWords(transcript)) {
+      setSafetyText(micSafety, "MIC: BAD LANGUAGE", "danger");
+      addWarning("Bad mic language detected.");
+    } else if (micOn) {
+      setSafetyText(micSafety, "MIC: CLEAR", "safe");
+    }
+  };
+
+  speechRecognition.onerror = () => {
+    setSafetyText(micSafety, "MIC: SPEECH CHECK LIMITED", "warn");
+  };
+
+  speechRecognition.onend = () => {
+    if (started && micOn) {
+      try {
+        speechRecognition.start();
+      } catch (error) {}
+    }
+  };
+
+  try {
+    speechRecognition.start();
+  } catch (error) {
+    setSafetyText(micSafety, "MIC: SPEECH CHECK LIMITED", "warn");
+  }
 }
 
 function createPeer() {
@@ -286,6 +435,12 @@ function sendMessage() {
   const text = messageInput.value.trim();
   if (!text || !partnerId) return;
 
+  if (containsBadWords(text)) {
+    addWarning("Bad chat message blocked.");
+    messageInput.value = "";
+    return;
+  }
+
   addMessage(text, true);
   socket.emit("chat-message", text);
   messageInput.value = "";
@@ -298,12 +453,6 @@ enterChatBtn.addEventListener("click", () => {
 homeBtn.addEventListener("click", () => {
   stopMatching();
   setSavedPage("landing");
-});
-
-refreshBtn.addEventListener("click", () => {
-  const currentPage = landingPage.classList.contains("hidden") ? "chat" : "landing";
-  localStorage.setItem("vibechat_page", currentPage);
-  location.reload();
 });
 
 micBtn.addEventListener("click", () => {
@@ -337,6 +486,11 @@ socket.on("signal", payload => {
 });
 
 socket.on("chat-message", payload => {
+  if (containsBadWords(payload.text)) {
+    addWarning("Bad incoming chat message blocked.");
+    return;
+  }
+
   addMessage(payload.text, false);
 });
 
@@ -352,5 +506,3 @@ socket.on("partner-left", () => {
 socket.on("stopped", () => {
   setStatus("Stopped", "", "");
 });
-
-
