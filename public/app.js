@@ -404,7 +404,7 @@ async function joinQueue() {
     stopBtn.disabled = false;
 
     messages.innerHTML = "";
-    addSystem("SEARCHING...");
+    console.log("SEARCHING...");
     setStatus("Searching", "Finding a match...", "searching");
 
     socket.emit("join", getProfile());
@@ -423,7 +423,7 @@ function nextMatch() {
 
   cleanupCall();
   messages.innerHTML = "";
-  addSystem("SEARCHING...");
+  console.log("SEARCHING...");
   setStatus("Searching", "Finding a match...", "searching");
 
   socket.emit("next", getProfile());
@@ -599,4 +599,5 @@ socket.on("banned", data => {
 socket.on("stopped", () => {
   setStatus("Stopped", "", "");
 });
+
 
