@@ -3,6 +3,7 @@ const socket = io();
 const landingPage = document.getElementById("landingPage");
 const enterChatBtn = document.getElementById("enterChatBtn");
 const homeBtn = document.getElementById("homeBtn");
+const refreshBtn = document.getElementById("refreshBtn");
 
 const localVideo = document.getElementById("localVideo");
 const remoteVideo = document.getElementById("remoteVideo");
@@ -286,6 +287,10 @@ homeBtn.addEventListener("click", () => {
   landingPage.classList.remove("hidden");
 });
 
+refreshBtn.addEventListener("click", () => {
+  location.reload();
+});
+
 micBtn.addEventListener("click", () => {
   micOn = !micOn;
   applyMediaToggles();
@@ -332,3 +337,4 @@ socket.on("partner-left", () => {
 socket.on("stopped", () => {
   setStatus("Stopped", "", "");
 });
+

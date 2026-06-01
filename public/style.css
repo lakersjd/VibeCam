@@ -365,7 +365,7 @@ button:disabled {
   fill: currentColor;
 }
 
-.home-button {
+.home-button, .refresh-button {
   width: 46px;
   height: 46px;
   background: #000;
@@ -544,3 +544,4 @@ select:focus {
     grid-template-columns: 1fr;
   }
 }
+
