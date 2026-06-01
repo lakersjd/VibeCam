@@ -99,6 +99,48 @@ function compatible(aId, bId) {
   return countryWorks(a, b) && matchFilterWorks(a, b);
 }
 
+function endPair(id) {
+  removeFromQueue(id);
+
+  const partnerId = peers.get(id);
+  if (!partnerId) return;
+
+  peers.delete(id);
+  peers.delete(partnerId);
+
+  const partnerSocket = io.sockets.sockets.get(partnerId);
+  if (partnerSocket) partnerSocket.emit("partner-left");
+}
+
+function banSocket(socket, reason) {
+  const ip = getIp(socket);
+
+  banIp(ip, reason);
+  endPair(socket.id);
+  removeFromQueue(socket.id);
+
+  socket.emit("banned", {
+    reason,
+    expiresAt: Date.now() + ONE_WEEK
+  });
+
+  socket.disconnect(true);
+
+  console.log("IP banned:", ip, reason);
+}
+
+function banPartnerOf(socket, reason) {
+  const partnerId = peers.get(socket.id);
+  if (!partnerId) return;
+
+  const partnerSocket = io.sockets.sockets.get(partnerId);
+  if (!partnerSocket) return;
+
+  banSocket(partnerSocket, reason);
+
+  socket.emit("partner-left");
+}
+
 function enqueue(socket) {
   if (!socket || peers.has(socket.id) || queue.includes(socket.id)) return;
 
@@ -165,19 +207,6 @@ function matchUsers() {
   }
 }
 
-function endPair(id) {
-  removeFromQueue(id);
-
-  const partnerId = peers.get(id);
-  if (!partnerId) return;
-
-  peers.delete(id);
-  peers.delete(partnerId);
-
-  const partnerSocket = io.sockets.sockets.get(partnerId);
-  if (partnerSocket) partnerSocket.emit("partner-left");
-}
-
 io.on("connection", socket => {
   const ip = getIp(socket);
   const ban = isBanned(ip);
@@ -210,22 +239,12 @@ io.on("connection", socket => {
     socket.emit("stopped");
   });
 
-  socket.on("safety-exposure", () => {
-    const bannedIp = getIp(socket);
+  socket.on("safety-exposure-self", () => {
+    banSocket(socket, "Private area exposure detected");
+  });
 
-    banIp(bannedIp, "Camera exposure detected");
-
-    console.log("IP banned for exposure:", bannedIp);
-
-    endPair(socket.id);
-    removeFromQueue(socket.id);
-
-    socket.emit("banned", {
-      reason: "Camera exposure detected",
-      expiresAt: Date.now() + ONE_WEEK
-    });
-
-    socket.disconnect(true);
+  socket.on("safety-exposure-partner", () => {
+    banPartnerOf(socket, "Private area exposure detected");
   });
 
   socket.on("signal", payload => {

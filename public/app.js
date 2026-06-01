@@ -39,7 +39,8 @@ let started = false;
 let micOn = true;
 let camOn = true;
 let warnings = 0;
-let exposureHits = 0;
+let localExposureHits = 0;
+let remoteExposureHits = 0;
 let cameraScanTimer = null;
 let speechRecognition = null;
 let bannedNow = false;
@@ -149,16 +150,22 @@ function containsRacism(text) {
   });
 }
 
-function banForExposure() {
-  if (bannedNow) return;
+function banForExposure(target) {
+  if (bannedNow && target === "self") return;
 
-  bannedNow = true;
+  if (target === "self") {
+    bannedNow = true;
+    setSafetyText(cameraSafety, "CAMERA: PRIVATE AREA BAN", "danger");
+    addSystem("PRIVATE AREA DETECTED. YOUR IP IS BANNED FOR 1 WEEK.");
+    socket.emit("safety-exposure-self");
+    stopMatching();
+    return;
+  }
 
-  setSafetyText(cameraSafety, "CAMERA: EXPOSURE BAN", "danger");
-  addSystem("EXPOSURE DETECTED. IP BAN ACTIVE FOR 1 WEEK.");
-
-  socket.emit("safety-exposure");
-  stopMatching();
+  setSafetyText(cameraSafety, "STRANGER: PRIVATE AREA BAN", "danger");
+  addSystem("PRIVATE AREA DETECTED ON STRANGER. STRANGER IP BAN SENT.");
+  socket.emit("safety-exposure-partner");
+  cleanupCall();
 }
 
 async function startCamera() {
@@ -201,47 +208,91 @@ function applyMediaToggles() {
   setSafetyText(cameraSafety, camOn ? "CAMERA: SCANNING" : "CAMERA: OFF", camOn ? "safe" : "warn");
 }
 
+function privateAreaScore(videoElement) {
+  if (!videoElement || !videoElement.videoWidth) return 0;
+
+  safetyCtx.drawImage(videoElement, 0, 0, safetyCanvas.width, safetyCanvas.height);
+
+  const frame = safetyCtx.getImageData(0, 0, safetyCanvas.width, safetyCanvas.height);
+  const data = frame.data;
+
+  let skinLike = 0;
+  let warmCluster = 0;
+  let total = data.length / 4;
+
+  for (let i = 0; i < data.length; i += 4) {
+    const r = data[i];
+    const g = data[i + 1];
+    const b = data[i + 2];
+
+    const max = Math.max(r, g, b);
+    const min = Math.min(r, g, b);
+    const brightness = (r + g + b) / 3;
+
+    const skinPixel =
+      r > 85 &&
+      g > 35 &&
+      b > 15 &&
+      max - min > 12 &&
+      r > g &&
+      r > b &&
+      brightness > 45 &&
+      brightness < 235;
+
+    if (skinPixel) {
+      skinLike++;
+
+      if (r > 120 && g > 55 && b > 35) {
+        warmCluster++;
+      }
+    }
+  }
+
+  const skinRatio = skinLike / total;
+  const warmRatio = warmCluster / total;
+
+  return Math.max(skinRatio, warmRatio);
+}
+
 function startCameraSafetyScan() {
   if (cameraScanTimer) clearInterval(cameraScanTimer);
 
   cameraScanTimer = setInterval(() => {
-    if (!localVideo.videoWidth || !camOn || bannedNow) return;
+    if (bannedNow) return;
 
-    safetyCtx.drawImage(localVideo, 0, 0, safetyCanvas.width, safetyCanvas.height);
+    if (camOn && localVideo.videoWidth) {
+      const localScore = privateAreaScore(localVideo);
 
-    const frame = safetyCtx.getImageData(0, 0, safetyCanvas.width, safetyCanvas.height);
-    const data = frame.data;
+      if (localScore > 0.68) {
+        localExposureHits += 1;
+        setSafetyText(cameraSafety, "YOUR CAMERA: POSSIBLE PRIVATE AREA " + localExposureHits + "/2", "danger");
 
-    let skinLike = 0;
-    let total = data.length / 4;
-
-    for (let i = 0; i < data.length; i += 4) {
-      const r = data[i];
-      const g = data[i + 1];
-      const b = data[i + 2];
-
-      const max = Math.max(r, g, b);
-      const min = Math.min(r, g, b);
-
-      if (r > 95 && g > 40 && b > 20 && max - min > 15 && r > g && r > b) {
-        skinLike++;
+        if (localExposureHits >= 2) {
+          banForExposure("self");
+          return;
+        }
+      } else {
+        localExposureHits = 0;
+        setSafetyText(cameraSafety, "CAMERA: CLEAR", "safe");
       }
     }
 
-    const skinRatio = skinLike / total;
+    if (remoteVideo.srcObject && remoteVideo.videoWidth) {
+      const remoteScore = privateAreaScore(remoteVideo);
 
-    if (skinRatio > 0.68) {
-      exposureHits += 1;
-      setSafetyText(cameraSafety, "CAMERA: POSSIBLE EXPOSURE " + exposureHits + "/2", "danger");
+      if (remoteScore > 0.68) {
+        remoteExposureHits += 1;
+        setSafetyText(cameraSafety, "STRANGER: POSSIBLE PRIVATE AREA " + remoteExposureHits + "/2", "danger");
 
-      if (exposureHits >= 2) {
-        banForExposure();
+        if (remoteExposureHits >= 2) {
+          banForExposure("partner");
+          remoteExposureHits = 0;
+        }
+      } else {
+        remoteExposureHits = 0;
       }
-    } else {
-      exposureHits = 0;
-      setSafetyText(cameraSafety, "CAMERA: CLEAR", "safe");
     }
-  }, 3500);
+  }, 3000);
 }
 
 function startMicSafetyScan() {
@@ -550,3 +601,4 @@ socket.on("banned", data => {
 socket.on("stopped", () => {
   setStatus("Stopped", "", "");
 });
+
