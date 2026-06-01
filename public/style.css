@@ -1,8 +1,6 @@
 @import url("https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap");
 
-* {
-  box-sizing: border-box;
-}
+* { box-sizing: border-box; }
 
 :root {
   --black: #050505;
@@ -25,11 +23,12 @@ body {
   overflow: hidden;
 }
 
-#safetyCanvas {
-  display: none;
-}
+#safetyCanvas { display: none; }
 
-.landing-page {
+.hidden { display: none !important; }
+
+.landing-page,
+.ban-screen {
   position: fixed;
   inset: 0;
   z-index: 100;
@@ -43,11 +42,8 @@ body {
   background-size: 24px 24px;
 }
 
-.landing-page.hidden {
-  display: none;
-}
-
-.landing-card {
+.landing-card,
+.ban-card {
   width: min(950px, 100%);
   max-height: 92vh;
   overflow-y: auto;
@@ -56,6 +52,11 @@ body {
   box-shadow: 4px 4px 0 #000;
   padding: 28px;
   text-align: center;
+}
+
+.ban-card {
+  width: min(620px, 100%);
+  border-color: var(--red);
 }
 
 .landing-logo {
@@ -69,7 +70,8 @@ body {
   font-size: 16px;
 }
 
-.landing-card h1 {
+.landing-card h1,
+.ban-card h1 {
   font-size: 28px;
   margin: 0;
 }
@@ -78,6 +80,32 @@ body {
   color: var(--light-gray);
   margin: 16px auto 24px;
   line-height: 1.7;
+}
+
+.age-box {
+  border: 1px solid var(--gray);
+  background: #000;
+  padding: 16px;
+  margin-bottom: 14px;
+  text-align: left;
+}
+
+.check-line {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  line-height: 1.6;
+  margin-top: 12px;
+}
+
+.check-line input {
+  width: auto;
+  margin-top: 2px;
+}
+
+.enter-warning {
+  color: var(--yellow);
+  min-height: 20px;
 }
 
 .info-grid {
@@ -212,13 +240,9 @@ p {
   border: 1px solid var(--white);
 }
 
-.statusDot.live {
-  background: #ffffff;
-}
+.statusDot.live { background: #ffffff; }
 
-.statusDot.searching {
-  animation: blink 0.8s infinite;
-}
+.statusDot.searching { animation: blink 0.8s infinite; }
 
 @keyframes blink {
   0% { background: var(--gray); }
@@ -253,13 +277,9 @@ p {
   box-shadow: 3px 3px 0 #000;
 }
 
-.remote-card {
-  grid-column: 1;
-}
+.remote-card { grid-column: 1; }
 
-.local-card {
-  grid-column: 2;
-}
+.local-card { grid-column: 2; }
 
 .videoCard video {
   position: absolute;
@@ -319,7 +339,7 @@ p {
   border: 1px solid var(--gray);
   background: var(--dark);
   display: grid;
-  grid-template-columns: 64px 64px 1fr 1fr;
+  grid-template-columns: 54px 54px 54px 1fr 1fr;
   gap: 10px;
   padding: 10px;
   box-shadow: 3px 3px 0 #000;
@@ -336,9 +356,7 @@ button {
   box-shadow: 3px 3px 0 #000;
 }
 
-button:hover {
-  background: var(--light-gray);
-}
+button:hover { background: var(--light-gray); }
 
 button:active {
   transform: translate(2px, 2px);
@@ -374,8 +392,9 @@ button:disabled {
   background: #000;
 }
 
-.control-icon.off {
-  background: var(--red);
+.control-icon.off,
+.report-icon {
+  background: var(--red-dark);
 }
 
 .main-action {
@@ -414,17 +433,9 @@ button:disabled {
   color: var(--light-gray);
 }
 
-.maturity-box .safe {
-  color: var(--white);
-}
-
-.maturity-box .warn {
-  color: var(--yellow);
-}
-
-.maturity-box .danger {
-  color: var(--red);
-}
+.maturity-box .safe { color: var(--white); }
+.maturity-box .warn { color: var(--yellow); }
+.maturity-box .danger { color: var(--red); }
 
 label {
   display: block;
@@ -446,9 +457,7 @@ select {
 }
 
 input:focus,
-select:focus {
-  border-color: var(--white);
-}
+select:focus { border-color: var(--white); }
 
 .chat-box {
   min-height: 0;
@@ -509,9 +518,7 @@ select:focus {
 }
 
 @media (max-width: 1000px) {
-  body {
-    overflow: auto;
-  }
+  body { overflow: auto; }
 
   .app {
     height: auto;
@@ -547,7 +554,7 @@ select:focus {
   }
 
   .control-bar {
-    grid-template-columns: 54px 54px 1fr 1fr;
+    grid-template-columns: 48px 48px 48px 1fr 1fr;
   }
 
   .info-grid {

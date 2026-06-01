@@ -12,35 +12,46 @@
     <div class="landing-card">
       <div class="landing-logo">VC</div>
       <h1>VibeChat</h1>
-      <p class="landing-subtitle">Random video chat with a dark 8-bit style.</p>
+      <p class="landing-subtitle">A safety-first random video chat with a dark 8-bit style.</p>
+
+      <div class="age-box">
+        <h2>18+ SAFETY GATE</h2>
+        <p>You must be 18 or older to use VibeChat.</p>
+        <p>VibeChat does not record video calls.</p>
+
+        <label class="check-line">
+          <input id="ageCheck" type="checkbox" />
+          <span>I confirm I am 18+ and I agree to follow the rules.</span>
+        </label>
+      </div>
 
       <div class="info-grid">
         <div class="info-box">
           <h2>WHAT IS IT?</h2>
-          <p>VibeChat is a random stranger video chat system where users can connect, talk, skip, and meet new people live.</p>
+          <p>VibeChat lets users connect live with random strangers, talk, skip, and leave anytime.</p>
         </div>
 
         <div class="info-box">
-          <h2>CONTENT MATURITY</h2>
-          <p>Safer Mode is enabled.</p>
-          <p>The site checks chat messages, listens for bad mic language when supported, and watches camera frames for possible exposure.</p>
-          <p>This system can make mistakes. Use NEXT or STOP anytime.</p>
+          <h2>SAFETY SYSTEM</h2>
+          <p>Possible private-area exposure can trigger a temporary safety ban.</p>
+          <p>Chat and mic moderation checks for racist language.</p>
+          <p>Reports are logged for safety review.</p>
         </div>
 
         <div class="info-box">
-          <h2>WHAT TO DO</h2>
+          <h2>DO THIS</h2>
           <p>Be respectful.</p>
           <p>Keep your camera clean.</p>
-          <p>Use NEXT to find a new match.</p>
-          <p>Use STOP when you are done.</p>
+          <p>Use REPORT for unsafe behavior.</p>
+          <p>Use NEXT or STOP whenever needed.</p>
         </div>
 
         <div class="info-box">
-          <h2>WHAT NOT TO DO</h2>
+          <h2>DO NOT DO THIS</h2>
           <p>Do not share private info.</p>
+          <p>Do not expose private areas.</p>
           <p>Do not harass people.</p>
-          <p>Do not expose yourself.</p>
-          <p>Do not use hate speech or threats.</p>
+          <p>Do not use racist language.</p>
         </div>
 
         <div class="info-box">
@@ -50,12 +61,21 @@
         </div>
       </div>
 
+      <p id="enterWarning" class="enter-warning"></p>
       <button id="enterChatBtn" class="enter-btn">ENTER VIBECHAT</button>
     </div>
   </section>
 
-  <main class="app">
+  <section id="banScreen" class="ban-screen hidden">
+    <div class="ban-card">
+      <h1>TEMPORARY SAFETY BAN</h1>
+      <p id="banReason">Reason: Safety violation</p>
+      <p id="banExpires">Expires: Unknown</p>
+      <p>This ban is used to help keep VibeChat safe.</p>
+    </div>
+  </section>
 
+  <main class="app">
     <section class="main-screen">
       <header class="top-bar">
         <div class="left-top">
@@ -110,6 +130,14 @@
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <path d="M3 7C3 5.9 3.9 5 5 5H14C15.1 5 16 5.9 16 7V17C16 18.1 15.1 19 14 19H5C3.9 19 3 18.1 3 17V7Z"></path>
             <path d="M17 10L22 7V17L17 14V10Z"></path>
+          </svg>
+        </button>
+
+        <button id="reportBtn" class="icon-btn control-icon report-icon" disabled title="Report">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M5 3H19V14H8L5 17V3Z"></path>
+            <path d="M11 6H13V10H11V6Z"></path>
+            <path d="M11 11H13V13H11V11Z"></path>
           </svg>
         </button>
 
@@ -170,7 +198,6 @@
         </div>
       </div>
     </aside>
-
   </main>
 
   <canvas id="safetyCanvas" width="160" height="90"></canvas>

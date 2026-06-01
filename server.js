@@ -2,6 +2,7 @@ const express = require("express");
 const http = require("http");
 const fs = require("fs");
 const path = require("path");
+const crypto = require("crypto");
 const { Server } = require("socket.io");
 
 const app = express();
@@ -15,19 +16,21 @@ const peers = new Map();
 const profiles = new Map();
 
 const bansFile = path.join(__dirname, "bans.json");
+const reportsFile = path.join(__dirname, "reports.json");
 const ONE_WEEK = 7 * 24 * 60 * 60 * 1000;
+const BAN_SALT = process.env.BAN_SALT || "vibechat-local-safety-salt";
 
-function loadBans() {
+function readJson(file, fallback) {
   try {
-    if (!fs.existsSync(bansFile)) return {};
-    return JSON.parse(fs.readFileSync(bansFile, "utf8"));
+    if (!fs.existsSync(file)) return fallback;
+    return JSON.parse(fs.readFileSync(file, "utf8"));
   } catch {
-    return {};
+    return fallback;
   }
 }
 
-function saveBans(bans) {
-  fs.writeFileSync(bansFile, JSON.stringify(bans, null, 2));
+function writeJson(file, data) {
+  fs.writeFileSync(file, JSON.stringify(data, null, 2));
 }
 
 function getIp(socket) {
@@ -36,34 +39,53 @@ function getIp(socket) {
   return String(raw || "unknown").replace("::ffff:", "");
 }
 
-function isBanned(ip) {
-  const bans = loadBans();
-  const ban = bans[ip];
+function hashIp(ip) {
+  return crypto.createHash("sha256").update(ip + BAN_SALT).digest("hex");
+}
 
-  if (!ban) return false;
+function isBanned(socket) {
+  const ipHash = hashIp(getIp(socket));
+  const bans = readJson(bansFile, {});
+  const ban = bans[ipHash];
+
+  if (!ban) return null;
 
   if (Date.now() > ban.expiresAt) {
-    delete bans[ip];
-    saveBans(bans);
-    return false;
+    delete bans[ipHash];
+    writeJson(bansFile, bans);
+    return null;
   }
 
   return ban;
 }
 
-function banIp(ip, reason) {
-  const bans = loadBans();
+function createBan(socket, reason) {
+  const ipHash = hashIp(getIp(socket));
+  const bans = readJson(bansFile, {});
 
-  bans[ip] = {
+  bans[ipHash] = {
     reason,
     createdAt: Date.now(),
     expiresAt: Date.now() + ONE_WEEK
   };
 
-  saveBans(bans);
+  writeJson(bansFile, bans);
+
+  return bans[ipHash];
 }
 
-function clean(value, fallback, max = 40) {
+function logReport(data) {
+  const reports = readJson(reportsFile, []);
+
+  reports.push({
+    ...data,
+    createdAt: Date.now()
+  });
+
+  writeJson(reportsFile, reports.slice(-1000));
+}
+
+function clean(value, fallback, max = 80) {
   return String(value || fallback).slice(0, max);
 }
 
@@ -74,9 +96,9 @@ function removeFromQueue(id) {
 
 function saveProfile(socket, profile) {
   profiles.set(socket.id, {
-    wantsGender: clean(profile?.wantsGender, "Any", 10),
-    country: clean(profile?.country, "Any", 30),
-    ip: getIp(socket)
+    wantsGender: clean(profile?.wantsGender, "Any", 20),
+    country: clean(profile?.country, "Any", 40),
+    ipHash: hashIp(getIp(socket))
   });
 }
 
@@ -93,7 +115,6 @@ function matchFilterWorks(a, b) {
 function compatible(aId, bId) {
   const a = profiles.get(aId);
   const b = profiles.get(bId);
-
   if (!a || !b) return false;
 
   return countryWorks(a, b) && matchFilterWorks(a, b);
@@ -113,20 +134,25 @@ function endPair(id) {
 }
 
 function banSocket(socket, reason) {
-  const ip = getIp(socket);
+  const ban = createBan(socket, reason);
 
-  banIp(ip, reason);
+  logReport({
+    type: "temporary_safety_ban",
+    reason,
+    userSocketId: socket.id,
+    userIpHash: hashIp(getIp(socket)),
+    expiresAt: ban.expiresAt
+  });
+
   endPair(socket.id);
   removeFromQueue(socket.id);
 
   socket.emit("banned", {
-    reason,
-    expiresAt: Date.now() + ONE_WEEK
+    reason: ban.reason,
+    expiresAt: ban.expiresAt
   });
 
   socket.disconnect(true);
-
-  console.log("IP banned:", ip, reason);
 }
 
 function banPartnerOf(socket, reason) {
@@ -136,22 +162,30 @@ function banPartnerOf(socket, reason) {
   const partnerSocket = io.sockets.sockets.get(partnerId);
   if (!partnerSocket) return;
 
-  banSocket(partnerSocket, reason);
+  logReport({
+    type: "partner_auto_report",
+    reason,
+    reporterSocketId: socket.id,
+    reporterIpHash: hashIp(getIp(socket)),
+    reportedSocketId: partnerSocket.id,
+    reportedIpHash: hashIp(getIp(partnerSocket))
+  });
 
+  banSocket(partnerSocket, reason);
   socket.emit("partner-left");
 }
 
 function enqueue(socket) {
   if (!socket || peers.has(socket.id) || queue.includes(socket.id)) return;
 
-  const ip = getIp(socket);
-  const ban = isBanned(ip);
+  const ban = isBanned(socket);
 
   if (ban) {
     socket.emit("banned", {
       reason: ban.reason,
       expiresAt: ban.expiresAt
     });
+
     socket.disconnect(true);
     return;
   }
@@ -208,8 +242,7 @@ function matchUsers() {
 }
 
 io.on("connection", socket => {
-  const ip = getIp(socket);
-  const ban = isBanned(ip);
+  const ban = isBanned(socket);
 
   if (ban) {
     socket.emit("banned", {
@@ -239,12 +272,29 @@ io.on("connection", socket => {
     socket.emit("stopped");
   });
 
+  socket.on("report-partner", reason => {
+    const partnerId = peers.get(socket.id);
+    const partnerSocket = partnerId ? io.sockets.sockets.get(partnerId) : null;
+
+    logReport({
+      type: "manual_report",
+      reason: clean(reason, "No reason", 300),
+      reporterSocketId: socket.id,
+      reporterIpHash: hashIp(getIp(socket)),
+      reportedSocketId: partnerSocket ? partnerSocket.id : null,
+      reportedIpHash: partnerSocket ? hashIp(getIp(partnerSocket)) : null
+    });
+
+    endPair(socket.id);
+    enqueue(socket);
+  });
+
   socket.on("safety-exposure-self", () => {
-    banSocket(socket, "Private area exposure detected");
+    banSocket(socket, "Possible private-area exposure detected");
   });
 
   socket.on("safety-exposure-partner", () => {
-    banPartnerOf(socket, "Private area exposure detected");
+    banPartnerOf(socket, "Possible private-area exposure detected");
   });
 
   socket.on("signal", payload => {
@@ -277,5 +327,5 @@ io.on("connection", socket => {
 const PORT = process.env.PORT || 3000;
 
 server.listen(PORT, () => {
-  console.log("VibeCam running on port " + PORT);
+  console.log("VibeChat running on port " + PORT);
 });

@@ -1,7 +1,13 @@
 const socket = io();
 
 const landingPage = document.getElementById("landingPage");
+const banScreen = document.getElementById("banScreen");
+const banReason = document.getElementById("banReason");
+const banExpires = document.getElementById("banExpires");
+
 const enterChatBtn = document.getElementById("enterChatBtn");
+const enterWarning = document.getElementById("enterWarning");
+const ageCheck = document.getElementById("ageCheck");
 const homeBtn = document.getElementById("homeBtn");
 
 const localVideo = document.getElementById("localVideo");
@@ -15,6 +21,7 @@ const nextBtn = document.getElementById("nextBtn");
 const stopBtn = document.getElementById("stopBtn");
 const micBtn = document.getElementById("micBtn");
 const camBtn = document.getElementById("camBtn");
+const reportBtn = document.getElementById("reportBtn");
 
 const statusText = document.getElementById("statusText");
 const partnerText = document.getElementById("partnerText");
@@ -57,12 +64,7 @@ const racistPatterns = [
   "\u0073\u0061\u006e\u0064\u006e\u0069\u0067\u0067\u0065\u0072",
   "white power",
   "heil hitler",
-  "go back to your country",
-  "all black people",
-  "all white people",
-  "all asian people",
-  "all mexican people",
-  "all dominican people"
+  "go back to your country"
 ];
 
 const rtcConfig = {
@@ -150,22 +152,12 @@ function containsRacism(text) {
   });
 }
 
-function banForExposure(target) {
-  if (bannedNow && target === "self") return;
-
-  if (target === "self") {
-    bannedNow = true;
-    setSafetyText(cameraSafety, "CAMERA: PRIVATE AREA BAN", "danger");
-    addSystem("PRIVATE AREA DETECTED. YOUR IP IS BANNED FOR 1 WEEK.");
-    socket.emit("safety-exposure-self");
-    stopMatching();
-    return;
-  }
-
-  setSafetyText(cameraSafety, "STRANGER: PRIVATE AREA BAN", "danger");
-  addSystem("PRIVATE AREA DETECTED ON STRANGER. STRANGER IP BAN SENT.");
-  socket.emit("safety-exposure-partner");
-  cleanupCall();
+function showBanScreen(reason, expiresAt) {
+  bannedNow = true;
+  banReason.textContent = "Reason: " + reason;
+  banExpires.textContent = "Expires: " + new Date(expiresAt).toLocaleString();
+  landingPage.classList.add("hidden");
+  banScreen.classList.remove("hidden");
 }
 
 async function startCamera() {
@@ -180,6 +172,7 @@ async function startCamera() {
   });
 
   localVideo.srcObject = localStream;
+
   micBtn.disabled = false;
   camBtn.disabled = false;
 
@@ -217,7 +210,6 @@ function privateAreaScore(videoElement) {
   const data = frame.data;
 
   let skinLike = 0;
-  let warmCluster = 0;
   let total = data.length / 4;
 
   for (let i = 0; i < data.length; i += 4) {
@@ -239,19 +231,10 @@ function privateAreaScore(videoElement) {
       brightness > 45 &&
       brightness < 235;
 
-    if (skinPixel) {
-      skinLike++;
-
-      if (r > 120 && g > 55 && b > 35) {
-        warmCluster++;
-      }
-    }
+    if (skinPixel) skinLike++;
   }
 
-  const skinRatio = skinLike / total;
-  const warmRatio = warmCluster / total;
-
-  return Math.max(skinRatio, warmRatio);
+  return skinLike / total;
 }
 
 function startCameraSafetyScan() {
@@ -265,10 +248,12 @@ function startCameraSafetyScan() {
 
       if (localScore > 0.68) {
         localExposureHits += 1;
-        setSafetyText(cameraSafety, "YOUR CAMERA: POSSIBLE PRIVATE AREA " + localExposureHits + "/2", "danger");
+        setSafetyText(cameraSafety, "YOUR CAMERA: POSSIBLE EXPOSURE " + localExposureHits + "/2", "danger");
 
         if (localExposureHits >= 2) {
-          banForExposure("self");
+          addSystem("POSSIBLE PRIVATE-AREA EXPOSURE DETECTED.");
+          socket.emit("safety-exposure-self");
+          stopMatching();
           return;
         }
       } else {
@@ -282,10 +267,12 @@ function startCameraSafetyScan() {
 
       if (remoteScore > 0.68) {
         remoteExposureHits += 1;
-        setSafetyText(cameraSafety, "STRANGER: POSSIBLE PRIVATE AREA " + remoteExposureHits + "/2", "danger");
+        setSafetyText(cameraSafety, "STRANGER: POSSIBLE EXPOSURE " + remoteExposureHits + "/2", "danger");
 
         if (remoteExposureHits >= 2) {
-          banForExposure("partner");
+          addSystem("POSSIBLE PRIVATE-AREA EXPOSURE DETECTED ON STRANGER.");
+          socket.emit("safety-exposure-partner");
+          cleanupCall();
           remoteExposureHits = 0;
         }
       } else {
@@ -403,6 +390,7 @@ function cleanupCall() {
   remoteEmpty.style.display = "grid";
   remoteLabel.textContent = "STRANGER";
   sendBtn.disabled = true;
+  reportBtn.disabled = true;
 }
 
 async function joinQueue() {
@@ -462,6 +450,7 @@ async function handleMatched(data) {
   setStatus("Matched", partnerCountry + " | Match: " + partnerMatch, "live");
 
   sendBtn.disabled = false;
+  reportBtn.disabled = false;
 
   messages.innerHTML = "";
   addSystem("MATCHED.");
@@ -531,6 +520,12 @@ function sendMessage() {
 }
 
 enterChatBtn.addEventListener("click", () => {
+  if (!ageCheck.checked) {
+    enterWarning.textContent = "You must confirm 18+ and agree to the rules.";
+    return;
+  }
+
+  enterWarning.textContent = "";
   setSavedPage("chat");
 });
 
@@ -547,6 +542,15 @@ micBtn.addEventListener("click", () => {
 camBtn.addEventListener("click", () => {
   camOn = !camOn;
   applyMediaToggles();
+});
+
+reportBtn.addEventListener("click", () => {
+  if (!partnerId) return;
+
+  const reason = prompt("Report reason:");
+  socket.emit("report-partner", reason || "Manual report");
+  addSystem("REPORT SENT.");
+  cleanupCall();
 });
 
 nextBtn.addEventListener("click", nextMatch);
@@ -588,17 +592,10 @@ socket.on("partner-left", () => {
 });
 
 socket.on("banned", data => {
-  const expires = new Date(data.expiresAt).toLocaleString();
-
-  bannedNow = true;
   stopMatching();
-
-  setStatus("Banned", "Reason: " + data.reason, "");
-  messages.innerHTML = "";
-  addSystem("YOU ARE BANNED UNTIL: " + expires);
+  showBanScreen(data.reason, data.expiresAt);
 });
 
 socket.on("stopped", () => {
   setStatus("Stopped", "", "");
 });
-
