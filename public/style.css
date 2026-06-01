@@ -24,6 +24,8 @@ body {
   overflow: hidden;
 }
 
+/* LANDING PAGE */
+
 .landing-page {
   position: fixed;
   inset: 0;
@@ -104,6 +106,8 @@ body {
   width: 100%;
   max-width: 360px;
 }
+
+/* MAIN APP */
 
 .app {
   width: 100vw;
@@ -221,31 +225,41 @@ p {
   100% { background: var(--gray); }
 }
 
+/* EQUAL SIDE-BY-SIDE VIDEO FRAMES */
+
 .video-zone {
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: 1fr 1fr;
   gap: 12px;
+  padding: 12px;
   border: 1px solid var(--gray);
   background: #000;
   box-shadow: 3px 3px 0 #000;
-  min-width: 0;
-  min-height: 0;
-  width: 100%;
-  height: 100%;
   overflow: hidden;
-  padding: 12px;
 }
 
 .videoCard {
-  background: #000;
-  overflow: hidden;
   position: relative;
-  min-width: 0;
-  min-height: 0;
   width: 100%;
   height: 100%;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  background: #000;
   border: 1px solid var(--gray);
   box-shadow: 3px 3px 0 #000;
+}
+
+.remote-card {
+  grid-column: 1;
+}
+
+.local-card {
+  grid-column: 2;
 }
 
 .videoCard video {
@@ -259,22 +273,6 @@ p {
   object-position: center;
   background: #000;
   display: block;
-}
-
-.remote-card {
-  position: relative;
-  width: 100%;
-  height: 100%;
-}
-
-.local-card {
-  position: relative;
-  width: 100%;
-  height: 100%;
-  border: 1px solid var(--gray);
-  background: var(--dark);
-  box-shadow: 3px 3px 0 #000;
-  z-index: 1;
 }
 
 .videoLabel {
@@ -317,6 +315,8 @@ p {
   box-shadow: 4px 4px 0 #000;
   margin-bottom: 14px;
 }
+
+/* CONTROLS */
 
 .control-bar {
   border: 1px solid var(--gray);
@@ -392,6 +392,8 @@ button:disabled {
 .stop-red:hover {
   background: var(--red-dark);
 }
+
+/* SIDE PANEL */
 
 .side-panel {
   border-left: 1px solid var(--gray);
@@ -494,6 +496,8 @@ select:focus {
   padding-right: 6px;
 }
 
+/* MOBILE */
+
 @media (max-width: 1000px) {
   body {
     overflow: auto;
@@ -514,6 +518,16 @@ select:focus {
   .video-zone {
     grid-template-columns: 1fr;
     grid-template-rows: 1fr 1fr;
+  }
+
+  .remote-card {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .local-card {
+    grid-column: 1;
+    grid-row: 2;
   }
 
   .side-panel {
