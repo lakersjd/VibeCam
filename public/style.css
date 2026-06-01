@@ -831,3 +831,13 @@ select:focus {
     grid-template-columns: 1fr;
   }
 }
+
+/* Logo boxes removed */
+.landing-brand,
+.brand-box {
+  gap: 0;
+}
+
+.left-top {
+  gap: 12px;
+}
