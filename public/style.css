@@ -961,3 +961,15 @@ select option:checked {
   font-size: 12px;
   line-height: 1.35;
 }
+
+.landing-language-label {
+  display: block;
+  margin-top: 16px;
+  margin-bottom: 8px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.landing-language-select {
+  margin-bottom: 14px;
+}

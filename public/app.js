@@ -116,7 +116,7 @@ function addSystem(text) {
 }
 
 async function translateText(text) {
-  const target = languageInput ? languageInput.value : "original";
+  const target = languageInput ? languageInput.value : (localStorage.getItem("xlinkvc_language") || "original");
 
   if (!text || target === "original") {
     return text;
@@ -647,6 +647,7 @@ socket.on("banned", data => {
 socket.on("stopped", () => {
   setStatus("Stopped", "", "");
 });
+
 
 
 
