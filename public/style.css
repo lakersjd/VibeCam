@@ -878,3 +878,30 @@ select option:checked {
   background: #6d28d9;
   color: #ffffff;
 }
+
+/* Less rounded frame corners */
+:root {
+  --radius: 14px;
+}
+
+.video-zone,
+.videoCard,
+.top-bar,
+.control-bar,
+.box,
+.preview-window,
+.preview-video {
+  border-radius: 12px;
+}
+
+.videoCard {
+  border-radius: 10px;
+}
+
+.videoLabel {
+  border-radius: 8px;
+}
+
+.pixel-face {
+  border-radius: 12px;
+}
