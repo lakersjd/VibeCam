@@ -566,3 +566,44 @@ select:focus { border-color: var(--white); }
 .maturity-box {
   display: none;
 }
+
+.socials-box {
+  border: 1px solid var(--gray);
+  background: #000;
+  padding: 16px;
+  margin-top: 14px;
+  text-align: left;
+}
+
+.socials-box h2 {
+  font-size: 11px;
+  margin-bottom: 14px;
+}
+
+.social-links {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 10px;
+}
+
+.social-links a {
+  border: 1px solid var(--white);
+  background: var(--gray);
+  color: var(--white);
+  font-family: "Press Start 2P", monospace;
+  font-size: 7px;
+  text-decoration: none;
+  text-align: center;
+  padding: 12px 8px;
+  box-shadow: 3px 3px 0 #000;
+}
+
+.social-links a:hover {
+  background: var(--light-gray);
+}
+
+@media (max-width: 1000px) {
+  .social-links {
+    grid-template-columns: 1fr;
+  }
+}
