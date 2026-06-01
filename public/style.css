@@ -414,7 +414,7 @@ button:disabled {
   background: var(--dark);
   padding: 14px;
   display: grid;
-  grid-template-rows: auto auto minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr);
   gap: 12px;
   min-height: 0;
   overflow: hidden;
@@ -560,4 +560,9 @@ select:focus { border-color: var(--white); }
   .info-grid {
     grid-template-columns: 1fr;
   }
+}
+
+/* Hidden safety monitor: system still runs, users do not see warning panel */
+.maturity-box {
+  display: none;
 }

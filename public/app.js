@@ -126,7 +126,7 @@ function addWarning(reason) {
   warnings += 1;
   warningCount.textContent = "WARNINGS: " + warnings;
   warningCount.className = warnings >= 3 ? "danger" : "warn";
-  addSystem("SAFETY WARNING: " + reason);
+  console.warn("Safety warning:", reason);
 }
 
 function normalizeText(text) {
@@ -251,7 +251,7 @@ function startCameraSafetyScan() {
         setSafetyText(cameraSafety, "YOUR CAMERA: POSSIBLE EXPOSURE " + localExposureHits + "/2", "danger");
 
         if (localExposureHits >= 2) {
-          addSystem("POSSIBLE PRIVATE-AREA EXPOSURE DETECTED.");
+          console.warn("Possible private-area exposure detected.");
           socket.emit("safety-exposure-self");
           stopMatching();
           return;
@@ -270,7 +270,7 @@ function startCameraSafetyScan() {
         setSafetyText(cameraSafety, "STRANGER: POSSIBLE EXPOSURE " + remoteExposureHits + "/2", "danger");
 
         if (remoteExposureHits >= 2) {
-          addSystem("POSSIBLE PRIVATE-AREA EXPOSURE DETECTED ON STRANGER.");
+          addSystem("STRANGER REMOVED BY SAFETY SYSTEM.");
           socket.emit("safety-exposure-partner");
           cleanupCall();
           remoteExposureHits = 0;
@@ -599,3 +599,4 @@ socket.on("banned", data => {
 socket.on("stopped", () => {
   setStatus("Stopped", "", "");
 });
+
