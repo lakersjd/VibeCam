@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Xlink.VC Admin</title>
+  <style>
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: #05060a;
+      color: #f5f5f7;
+      font-family: Inter, system-ui, Arial, sans-serif;
+    }
+
+    .wrap {
+      width: min(1200px, 94%);
+      margin: auto;
+      padding: 28px 0;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 22px;
+    }
+
+    h1, h2, p { margin-top: 0; }
+
+    p { color: #a7adbb; }
+
+    button {
+      border: 0;
+      background: #8b5cf6;
+      color: white;
+      padding: 10px 14px;
+      border-radius: 10px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    button.danger {
+      background: #ef4444;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+      margin-bottom: 14px;
+    }
+
+    .card {
+      border: 1px solid rgba(255,255,255,0.1);
+      background: #12141c;
+      border-radius: 14px;
+      padding: 18px;
+    }
+
+    .number {
+      font-size: 34px;
+      font-weight: 900;
+    }
+
+    .section {
+      margin-top: 14px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+
+    th, td {
+      text-align: left;
+      padding: 12px;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      vertical-align: top;
+    }
+
+    th {
+      color: #a7adbb;
+      font-size: 12px;
+      text-transform: uppercase;
+    }
+
+    code {
+      color: #ddd6fe;
+      word-break: break-all;
+    }
+
+    .empty {
+      color: #a7adbb;
+      padding: 12px 0;
+    }
+
+    @media (max-width: 800px) {
+      .grid { grid-template-columns: 1fr; }
+      table { font-size: 12px; }
+      th, td { padding: 8px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div>
+        <h1>Xlink.VC Admin</h1>
+        <p>Reports, bans, and live safety stats.</p>
+      </div>
+      <button onclick="loadAdmin()">Refresh</button>
+    </header>
+
+    <section class="grid">
+      <div class="card">
+        <p>Active users</p>
+        <div class="number" id="activeUsers">0</div>
+      </div>
+
+      <div class="card">
+        <p>Waiting users</p>
+        <div class="number" id="waitingUsers">0</div>
+      </div>
+
+      <div class="card">
+        <p>Matched pairs</p>
+        <div class="number" id="matchedPairs">0</div>
+      </div>
+    </section>
+
+    <section class="card section">
+      <h2>Active Bans</h2>
+      <div id="bans"></div>
+    </section>
+
+    <section class="card section">
+      <h2>Reports</h2>
+      <button class="danger" onclick="clearReports()">Clear Reports</button>
+      <div id="reports"></div>
+    </section>
+  </div>
+
+  <script>
+    function formatTime(ms) {
+      if (!ms) return "Unknown";
+      return new Date(ms).toLocaleString();
+    }
+
+    async function loadAdmin() {
+      const res = await fetch("/api/admin/stats");
+      const data = await res.json();
+
+      document.getElementById("activeUsers").textContent = data.activeUsers;
+      document.getElementById("waitingUsers").textContent = data.waitingUsers;
+      document.getElementById("matchedPairs").textContent = data.matchedPairs;
+
+      renderBans(data.activeBans || []);
+      renderReports(data.reports || []);
+    }
+
+    function renderBans(bans) {
+      const root = document.getElementById("bans");
+
+      if (!bans.length) {
+        root.innerHTML = '<p class="empty">No active bans.</p>';
+        return;
+      }
+
+      root.innerHTML = `
+        <table>
+          <thead>
+            <tr>
+              <th>IP Hash</th>
+              <th>Reason</th>
+              <th>Created</th>
+              <th>Expires</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${bans.map(ban => `
+              <tr>
+                <td><code>${ban.ipHash}</code></td>
+                <td>${ban.reason}</td>
+                <td>${formatTime(ban.createdAt)}</td>
+                <td>${formatTime(ban.expiresAt)}</td>
+                <td><button onclick="unban('${ban.ipHash}')">Unban</button></td>
+              </tr>
+            `).join("")}
+          </tbody>
+        </table>
+      `;
+    }
+
+    function renderReports(reports) {
+      const root = document.getElementById("reports");
+
+      if (!reports.length) {
+        root.innerHTML = '<p class="empty">No reports yet.</p>';
+        return;
+      }
+
+      root.innerHTML = `
+        <table>
+          <thead>
+            <tr>
+              <th>Time</th>
+              <th>Type</th>
+              <th>Reason</th>
+              <th>Reporter</th>
+              <th>Reported</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${reports.map(report => `
+              <tr>
+                <td>${formatTime(report.createdAt)}</td>
+                <td>${report.type || "report"}</td>
+                <td>${report.reason || ""}</td>
+                <td><code>${report.reporterIpHash || report.userIpHash || ""}</code></td>
+                <td><code>${report.reportedIpHash || ""}</code></td>
+              </tr>
+            `).join("")}
+          </tbody>
+        </table>
+      `;
+    }
+
+    async function unban(ipHash) {
+      await fetch("/api/admin/unban", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ipHash })
+      });
+
+      loadAdmin();
+    }
+
+    async function clearReports() {
+      if (!confirm("Clear all reports?")) return;
+
+      await fetch("/api/admin/clear-reports", {
+        method: "POST"
+      });
+
+      loadAdmin();
+    }
+
+    loadAdmin();
+    setInterval(loadAdmin, 10000);
+  </script>
+</body>
+</html>

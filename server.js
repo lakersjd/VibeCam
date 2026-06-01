@@ -10,7 +10,6 @@ const server = http.createServer(app);
 const io = new Server(server);
 
 app.use(express.json());
-app.use(express.static("public"));
 
 const queue = [];
 const peers = new Map();
@@ -21,6 +20,7 @@ const reportsFile = path.join(__dirname, "reports.json");
 
 const FIVE_MINUTES = 5 * 60 * 1000;
 const BAN_SALT = process.env.BAN_SALT || "xlinkvc-local-safety-salt";
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "change-this-password";
 
 function readJson(file, fallback) {
   try {
@@ -43,6 +43,29 @@ function getIp(socket) {
 
 function hashIp(ip) {
   return crypto.createHash("sha256").update(ip + BAN_SALT).digest("hex");
+}
+
+function clean(value, fallback, max = 500) {
+  return String(value || fallback).slice(0, max);
+}
+
+function adminAuth(req, res, next) {
+  const header = req.headers.authorization || "";
+
+  if (!header.startsWith("Basic ")) {
+    res.setHeader("WWW-Authenticate", 'Basic realm="Xlink.VC Admin"');
+    return res.status(401).send("Admin login required.");
+  }
+
+  const decoded = Buffer.from(header.slice(6), "base64").toString("utf8");
+  const [user, pass] = decoded.split(":");
+
+  if (user === "admin" && pass === ADMIN_PASSWORD) {
+    return next();
+  }
+
+  res.setHeader("WWW-Authenticate", 'Basic realm="Xlink.VC Admin"');
+  return res.status(401).send("Wrong admin login.");
 }
 
 function isBanned(socket) {
@@ -86,10 +109,6 @@ function logReport(data) {
   writeJson(reportsFile, reports.slice(-1000));
 }
 
-function clean(value, fallback, max = 500) {
-  return String(value || fallback).slice(0, max);
-}
-
 function removeFromQueue(id) {
   const index = queue.indexOf(id);
   if (index !== -1) queue.splice(index, 1);
@@ -99,7 +118,8 @@ function saveProfile(socket, profile) {
   profiles.set(socket.id, {
     wantsGender: clean(profile?.wantsGender, "Any", 20),
     country: clean(profile?.country, "Any", 40),
-    ipHash: hashIp(getIp(socket))
+    ipHash: hashIp(getIp(socket)),
+    connectedAt: Date.now()
   });
 }
 
@@ -243,6 +263,50 @@ function matchUsers() {
   }
 }
 
+/* Admin dashboard */
+app.get("/admin", adminAuth, (req, res) => {
+  res.sendFile(path.join(__dirname, "admin", "admin.html"));
+});
+
+app.get("/api/admin/stats", adminAuth, (req, res) => {
+  const bans = readJson(bansFile, {});
+  const reports = readJson(reportsFile, []);
+
+  const activeBans = Object.entries(bans)
+    .filter(([_, ban]) => Date.now() < ban.expiresAt)
+    .map(([ipHash, ban]) => ({ ipHash, ...ban }))
+    .sort((a, b) => b.createdAt - a.createdAt);
+
+  res.json({
+    activeUsers: io.engine.clientsCount,
+    waitingUsers: queue.length,
+    matchedPairs: peers.size / 2,
+    profiles: Array.from(profiles.values()),
+    activeBans,
+    reports: reports.slice(-100).reverse()
+  });
+});
+
+app.post("/api/admin/unban", adminAuth, (req, res) => {
+  const ipHash = String(req.body?.ipHash || "");
+  const bans = readJson(bansFile, {});
+
+  if (bans[ipHash]) {
+    delete bans[ipHash];
+    writeJson(bansFile, bans);
+    return res.json({ ok: true });
+  }
+
+  res.status(404).json({ ok: false, error: "Ban not found" });
+});
+
+app.post("/api/admin/clear-reports", adminAuth, (req, res) => {
+  writeJson(reportsFile, []);
+  res.json({ ok: true });
+});
+
+app.use(express.static("public"));
+
 io.on("connection", socket => {
   const ban = isBanned(socket);
 
@@ -307,7 +371,7 @@ io.on("connection", socket => {
     banPartnerOf(socket, "Unsafe racist or sexual-exposure language detected");
   });
 
-    socket.on("media-status", status => {
+  socket.on("media-status", status => {
     const partnerId = peers.get(socket.id);
     if (!partnerId) return;
 
@@ -349,4 +413,3 @@ const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
   console.log("Xlink.VC running on port " + PORT);
 });
-
