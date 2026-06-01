@@ -841,3 +841,40 @@ select:focus {
 .left-top {
   gap: 12px;
 }
+
+/* Modern dropdown theme */
+select {
+  appearance: none;
+  -webkit-appearance: none;
+  background-color: rgba(0, 0, 0, 0.32);
+  background-image: url("data:image/svg+xml,%3Csvg width='16' height='16' viewBox='0 0 24 24' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M7 10L12 15L17 10' stroke='%23f5f5f7' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  background-size: 16px;
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 12px 44px 12px 13px;
+  cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+}
+
+select:hover {
+  background-color: rgba(255, 255, 255, 0.06);
+  border-color: var(--line-strong);
+}
+
+select:focus {
+  border-color: rgba(139, 92, 246, 0.75);
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.16);
+}
+
+select option {
+  background: #12141c;
+  color: #f5f5f7;
+}
+
+select option:checked {
+  background: #6d28d9;
+  color: #ffffff;
+}
