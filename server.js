@@ -1,5 +1,7 @@
 const express = require("express");
 const http = require("http");
+const fs = require("fs");
+const path = require("path");
 const { Server } = require("socket.io");
 
 const app = express();
@@ -11,6 +13,55 @@ app.use(express.static("public"));
 const queue = [];
 const peers = new Map();
 const profiles = new Map();
+
+const bansFile = path.join(__dirname, "bans.json");
+const ONE_WEEK = 7 * 24 * 60 * 60 * 1000;
+
+function loadBans() {
+  try {
+    if (!fs.existsSync(bansFile)) return {};
+    return JSON.parse(fs.readFileSync(bansFile, "utf8"));
+  } catch {
+    return {};
+  }
+}
+
+function saveBans(bans) {
+  fs.writeFileSync(bansFile, JSON.stringify(bans, null, 2));
+}
+
+function getIp(socket) {
+  const forwarded = socket.handshake.headers["x-forwarded-for"];
+  const raw = forwarded ? forwarded.split(",")[0].trim() : socket.handshake.address;
+  return String(raw || "unknown").replace("::ffff:", "");
+}
+
+function isBanned(ip) {
+  const bans = loadBans();
+  const ban = bans[ip];
+
+  if (!ban) return false;
+
+  if (Date.now() > ban.expiresAt) {
+    delete bans[ip];
+    saveBans(bans);
+    return false;
+  }
+
+  return ban;
+}
+
+function banIp(ip, reason) {
+  const bans = loadBans();
+
+  bans[ip] = {
+    reason,
+    createdAt: Date.now(),
+    expiresAt: Date.now() + ONE_WEEK
+  };
+
+  saveBans(bans);
+}
 
 function clean(value, fallback, max = 40) {
   return String(value || fallback).slice(0, max);
@@ -24,7 +75,8 @@ function removeFromQueue(id) {
 function saveProfile(socket, profile) {
   profiles.set(socket.id, {
     wantsGender: clean(profile?.wantsGender, "Any", 10),
-    country: clean(profile?.country, "Any", 30)
+    country: clean(profile?.country, "Any", 30),
+    ip: getIp(socket)
   });
 }
 
@@ -49,6 +101,18 @@ function compatible(aId, bId) {
 
 function enqueue(socket) {
   if (!socket || peers.has(socket.id) || queue.includes(socket.id)) return;
+
+  const ip = getIp(socket);
+  const ban = isBanned(ip);
+
+  if (ban) {
+    socket.emit("banned", {
+      reason: ban.reason,
+      expiresAt: ban.expiresAt
+    });
+    socket.disconnect(true);
+    return;
+  }
 
   queue.push(socket.id);
 
@@ -115,6 +179,19 @@ function endPair(id) {
 }
 
 io.on("connection", socket => {
+  const ip = getIp(socket);
+  const ban = isBanned(ip);
+
+  if (ban) {
+    socket.emit("banned", {
+      reason: ban.reason,
+      expiresAt: ban.expiresAt
+    });
+
+    socket.disconnect(true);
+    return;
+  }
+
   socket.on("join", profile => {
     saveProfile(socket, profile);
     endPair(socket.id);
@@ -131,6 +208,24 @@ io.on("connection", socket => {
     removeFromQueue(socket.id);
     endPair(socket.id);
     socket.emit("stopped");
+  });
+
+  socket.on("safety-exposure", () => {
+    const bannedIp = getIp(socket);
+
+    banIp(bannedIp, "Camera exposure detected");
+
+    console.log("IP banned for exposure:", bannedIp);
+
+    endPair(socket.id);
+    removeFromQueue(socket.id);
+
+    socket.emit("banned", {
+      reason: "Camera exposure detected",
+      expiresAt: Date.now() + ONE_WEEK
+    });
+
+    socket.disconnect(true);
   });
 
   socket.on("signal", payload => {

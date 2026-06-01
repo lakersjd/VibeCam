@@ -39,20 +39,29 @@ let started = false;
 let micOn = true;
 let camOn = true;
 let warnings = 0;
+let exposureHits = 0;
 let cameraScanTimer = null;
 let speechRecognition = null;
+let bannedNow = false;
 
-const bannedWords = [
-  "fuck you",
-  "kill yourself",
-  "kys",
-  "nigger",
-  "faggot",
-  "bitch",
-  "slut",
-  "whore",
-  "rape",
-  "terrorist"
+const racistPatterns = [
+  "\u006e\u0069\u0067\u0067\u0065\u0072",
+  "\u006e\u0069\u0067\u0067\u0061",
+  "\u0063\u006f\u006f\u006e",
+  "\u0063\u0068\u0069\u006e\u006b",
+  "\u0073\u0070\u0069\u0063",
+  "\u0077\u0065\u0074\u0062\u0061\u0063\u006b",
+  "\u006b\u0069\u006b\u0065",
+  "\u0072\u0061\u0067\u0068\u0065\u0061\u0064",
+  "\u0073\u0061\u006e\u0064\u006e\u0069\u0067\u0067\u0065\u0072",
+  "white power",
+  "heil hitler",
+  "go back to your country",
+  "all black people",
+  "all white people",
+  "all asian people",
+  "all mexican people",
+  "all dominican people"
 ];
 
 const rtcConfig = {
@@ -94,23 +103,6 @@ function setSafetyText(element, text, level) {
   element.className = level || "";
 }
 
-function addWarning(reason) {
-  warnings += 1;
-  warningCount.textContent = "WARNINGS: " + warnings;
-  warningCount.className = warnings >= 3 ? "danger" : "warn";
-  addSystem("SAFETY WARNING: " + reason);
-
-  if (warnings >= 3) {
-    stopMatching();
-    addSystem("SAFER MODE STOPPED THE SESSION.");
-  }
-}
-
-function containsBadWords(text) {
-  const lower = String(text || "").toLowerCase();
-  return bannedWords.some(word => lower.includes(word));
-}
-
 function addSystem(text) {
   const div = document.createElement("div");
   div.className = "systemMsg";
@@ -125,6 +117,48 @@ function addMessage(text, mine) {
   div.textContent = text;
   messages.appendChild(div);
   messages.scrollTop = messages.scrollHeight;
+}
+
+function addWarning(reason) {
+  warnings += 1;
+  warningCount.textContent = "WARNINGS: " + warnings;
+  warningCount.className = warnings >= 3 ? "danger" : "warn";
+  addSystem("SAFETY WARNING: " + reason);
+}
+
+function normalizeText(text) {
+  return String(text || "")
+    .toLowerCase()
+    .replace(/[@]/g, "a")
+    .replace(/[!1|]/g, "i")
+    .replace(/[$5]/g, "s")
+    .replace(/[0]/g, "o")
+    .replace(/[3]/g, "e")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function containsRacism(text) {
+  const clean = normalizeText(text);
+  const compact = clean.replace(/[^a-z0-9]/g, "");
+
+  return racistPatterns.some(pattern => {
+    const p = normalizeText(pattern);
+    const compactPattern = p.replace(/[^a-z0-9]/g, "");
+    return clean.includes(p) || compact.includes(compactPattern);
+  });
+}
+
+function banForExposure() {
+  if (bannedNow) return;
+
+  bannedNow = true;
+
+  setSafetyText(cameraSafety, "CAMERA: EXPOSURE BAN", "danger");
+  addSystem("EXPOSURE DETECTED. IP BAN ACTIVE FOR 1 WEEK.");
+
+  socket.emit("safety-exposure");
+  stopMatching();
 }
 
 async function startCamera() {
@@ -143,7 +177,7 @@ async function startCamera() {
   camBtn.disabled = false;
 
   setSafetyText(cameraSafety, "CAMERA: SCANNING", "safe");
-  setSafetyText(micSafety, "MIC: SCANNING", "safe");
+  setSafetyText(micSafety, "MIC: RACISM CHECK", "safe");
 
   startCameraSafetyScan();
   startMicSafetyScan();
@@ -163,7 +197,7 @@ function applyMediaToggles() {
   micBtn.classList.toggle("off", !micOn);
   camBtn.classList.toggle("off", !camOn);
 
-  setSafetyText(micSafety, micOn ? "MIC: SCANNING" : "MIC: OFF", micOn ? "safe" : "warn");
+  setSafetyText(micSafety, micOn ? "MIC: RACISM CHECK" : "MIC: OFF", micOn ? "safe" : "warn");
   setSafetyText(cameraSafety, camOn ? "CAMERA: SCANNING" : "CAMERA: OFF", camOn ? "safe" : "warn");
 }
 
@@ -171,7 +205,7 @@ function startCameraSafetyScan() {
   if (cameraScanTimer) clearInterval(cameraScanTimer);
 
   cameraScanTimer = setInterval(() => {
-    if (!localVideo.videoWidth || !camOn) return;
+    if (!localVideo.videoWidth || !camOn || bannedNow) return;
 
     safetyCtx.drawImage(localVideo, 0, 0, safetyCanvas.width, safetyCanvas.height);
 
@@ -179,7 +213,6 @@ function startCameraSafetyScan() {
     const data = frame.data;
 
     let skinLike = 0;
-    let bright = 0;
     let total = data.length / 4;
 
     for (let i = 0; i < data.length; i += 4) {
@@ -193,19 +226,19 @@ function startCameraSafetyScan() {
       if (r > 95 && g > 40 && b > 20 && max - min > 15 && r > g && r > b) {
         skinLike++;
       }
-
-      if ((r + g + b) / 3 > 210) {
-        bright++;
-      }
     }
 
     const skinRatio = skinLike / total;
-    const brightRatio = bright / total;
 
-    if (skinRatio > 0.62 && brightRatio < 0.75) {
-      setSafetyText(cameraSafety, "CAMERA: POSSIBLE EXPOSURE", "danger");
-      addWarning("Possible camera exposure detected.");
+    if (skinRatio > 0.68) {
+      exposureHits += 1;
+      setSafetyText(cameraSafety, "CAMERA: POSSIBLE EXPOSURE " + exposureHits + "/2", "danger");
+
+      if (exposureHits >= 2) {
+        banForExposure();
+      }
     } else {
+      exposureHits = 0;
       setSafetyText(cameraSafety, "CAMERA: CLEAR", "safe");
     }
   }, 3500);
@@ -236,9 +269,9 @@ function startMicSafetyScan() {
       transcript += event.results[i][0].transcript + " ";
     }
 
-    if (containsBadWords(transcript)) {
-      setSafetyText(micSafety, "MIC: BAD LANGUAGE", "danger");
-      addWarning("Bad mic language detected.");
+    if (containsRacism(transcript)) {
+      setSafetyText(micSafety, "MIC: RACISM DETECTED", "danger");
+      addWarning("Racism detected on mic.");
     } else if (micOn) {
       setSafetyText(micSafety, "MIC: CLEAR", "safe");
     }
@@ -435,8 +468,8 @@ function sendMessage() {
   const text = messageInput.value.trim();
   if (!text || !partnerId) return;
 
-  if (containsBadWords(text)) {
-    addWarning("Bad chat message blocked.");
+  if (containsRacism(text)) {
+    addWarning("Racist chat message blocked.");
     messageInput.value = "";
     return;
   }
@@ -486,8 +519,8 @@ socket.on("signal", payload => {
 });
 
 socket.on("chat-message", payload => {
-  if (containsBadWords(payload.text)) {
-    addWarning("Bad incoming chat message blocked.");
+  if (containsRacism(payload.text)) {
+    addWarning("Racist incoming chat message blocked.");
     return;
   }
 
@@ -501,6 +534,17 @@ socket.on("partner-left", () => {
     setStatus("Searching", "Partner left. Press NEXT.", "searching");
     addSystem("PARTNER LEFT.");
   }
+});
+
+socket.on("banned", data => {
+  const expires = new Date(data.expiresAt).toLocaleString();
+
+  bannedNow = true;
+  stopMatching();
+
+  setStatus("Banned", "Reason: " + data.reason, "");
+  messages.innerHTML = "";
+  addSystem("YOU ARE BANNED UNTIL: " + expires);
 });
 
 socket.on("stopped", () => {
