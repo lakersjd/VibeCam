@@ -582,7 +582,7 @@ select:focus { border-color: var(--white); }
 
 .social-links {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: 1fr;
   gap: 10px;
 }
 
@@ -607,3 +607,4 @@ select:focus { border-color: var(--white); }
     grid-template-columns: 1fr;
   }
 }
+
