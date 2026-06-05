@@ -9,108 +9,37 @@
 <body>
 
     <section id="landingPage" class="landing-page">
-    <div class="landing-shell">
-      <nav class="landing-nav">
-        <div class="landing-brand">
-          <span>Xlink.VC</span>
-        </div>
+  <div class="landing-shell">
+    <nav class="landing-nav">
+      <div class="landing-brand">
+        <span>Xlink.VC</span>
+      </div>
 
-        <div class="landing-nav-links">
-          <a href="#aboutBox">About</a>
-          <a href="#rulesBox">Rules</a>
-          <a href="https://discord.gg/Y8K54y2q" target="_blank" rel="noopener noreferrer">Discord</a>
-        </div>
+      <button id="enterChatBtn" class="nav-enter-btn">Start</button>
+    </nav>
+<section class="landing-hero">
+<div class="age-box hero-age-box">
+        <h2>18+ SAFETY GATE</h2>
+        <p>You must be 18 or older to use Xlink.VC.</p>
+        <p>Xlink.VC does not record video calls.</p>
 
-        <button id="enterChatBtn" class="nav-enter-btn">Enter</button>
-      </nav>
+        <label class="check-line">
+          <input id="ageCheck" type="checkbox" />
+          <span>I confirm I am 18+ and I agree to follow the rules.</span>
+        </label>
 
-      <div class="hero-badge">✦ Safer random video chat</div>
+        <p id="enterWarning" class="enter-warning"></p>
+      </div>
+    </section>
 
-      <section class="landing-hero">
-        <h1>Meet strangers with a safer vibe.</h1>
+    <footer class="landing-footer">
+      <a href="https://discord.gg/Y8K54y2q" target="_blank" rel="noopener noreferrer">Join Discord</a>
+      <span>Created by Random_E556</span>
+    </footer>
+  </div>
+</section>
 
-        <div class="age-box hero-age-box">
-          <h2>18+ SAFETY GATE</h2>
-          <p>You must be 18 or older to use Xlink.VC.</p>
-          <p>Xlink.VC does not record video calls.</p>
-<label class="check-line">
-            <input id="ageCheck" type="checkbox" />
-            <span>I confirm I am 18+ and I agree to follow the rules.</span>
-          </label>
-
-          <p id="enterWarning" class="enter-warning"></p>
-        </div>
-      </section>
-
-      <section class="landing-preview">
-        <div class="preview-window">
-          <div class="preview-top">
-            <span></span>
-            <span></span>
-            <span></span>
-          </div>
-
-          <div class="preview-content">
-            <aside class="preview-sidebar">
-              <p>FILTERS</p>
-              <div></div>
-              <div></div>
-              <p>CHAT LOG</p>
-              <div class="short"></div>
-              <div class="short"></div>
-              <div class="short"></div>
-            </aside>
-
-            <main class="preview-main">
-              <div class="preview-video left-preview">
-                <span>STRANGER</span>
-              </div>
-              <div class="preview-video right-preview">
-                <span>YOU</span>
-              </div>
-            </main>
-          </div>
-        </div>
-      </section>
-
-      <section class="info-grid landing-info-grid">
-        <div class="info-box" id="aboutBox">
-          <h2>WHAT IS Xlink.VC?</h2>
-          <p>Connect live with random people, talk, skip, report, or stop anytime.</p>
-        </div>
-
-        <div class="info-box">
-          <h2>SAFETY SYSTEM</h2>
-          <p>Possible private-area exposure can trigger a temporary safety ban.</p>
-          <p>Racist chat and mic language is blocked or flagged.</p>
-        </div>
-
-        <div class="info-box" id="rulesBox">
-          <h2>WHAT TO DO</h2>
-          <p>Be respectful. Keep your camera clean. Use REPORT for unsafe behavior.</p>
-        </div>
-
-        <div class="info-box">
-          <h2>WHAT NOT TO DO</h2>
-          <p>Do not expose yourself, harass people, share private info, or use racist language.</p>
-        </div>
-
-        <div class="info-box">
-          <h2>DISCORD</h2>
-          <p>Join the Xlink.VC community server.</p>
-          <a class="discord-only-link" href="https://discord.gg/Y8K54y2q" target="_blank" rel="noopener noreferrer">JOIN DISCORD</a>
-        </div>
-
-        <div class="info-box">
-          <h2>CREDITS</h2>
-          <p>Built with help from AI.</p>
-          <p>Created by Random_E556.</p>
-        </div>
-      </section>
-    </div>
-  </section>
-
-  <section id="banScreen" class="ban-screen hidden">
+<section id="banScreen" class="ban-screen hidden">
     <div class="ban-card">
       <h1>TEMPORARY SAFETY BAN</h1>
       <p id="banReason">Reason: Safety violation</p>
