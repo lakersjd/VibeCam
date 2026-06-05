@@ -234,12 +234,10 @@ async function startCamera() {
   micBtn.disabled = false;
   camBtn.disabled = false;
 
-  setSafetyText(cameraSafety, "CAMERA: ON", "safe");
+  setSafetyText(cameraSafety, "CAMERA: SCANNING", "safe");
   setSafetyText(micSafety, "MIC: RACISM CHECK", "safe");
 
-  // Disabled skin-pixel auto-ban scanner.
-  // It was falsely banning normal faces/hands because it only checks skin-colored pixels.
-  // startCameraSafetyScan();
+  startCameraSafetyScan();
   startMicSafetyScan();
 }
 
@@ -258,7 +256,7 @@ function applyMediaToggles() {
   camBtn.classList.toggle("off", !camOn);
 
   setSafetyText(micSafety, micOn ? "MIC: RACISM CHECK" : "MIC: OFF", micOn ? "safe" : "warn");
-  setSafetyText(cameraSafety, camOn ? "CAMERA: ON" : "CAMERA: OFF", camOn ? "safe" : "warn");
+  setSafetyText(cameraSafety, camOn ? "CAMERA: SCANNING" : "CAMERA: OFF", camOn ? "safe" : "warn");
 
   updateMediaIndicators("local", micOn, camOn);
   emitMediaStatus();

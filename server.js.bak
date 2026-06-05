@@ -783,30 +783,13 @@ io.on("connection", async socket => {
   socket.on("safety-exposure-self", async () => {
     if (!socketLimit(socket, "safety-self", 5, 60 * 1000)) return;
 
-    await logReport({
-      type: "camera_safety_warning_self",
-      reason: "Camera scanner warning ignored; auto-ban disabled to prevent face false positives",
-      userSocketId: socket.id,
-      userIpHash: hashIp(getIp(socket))
-    });
-
-    socket.emit("safety-warning", "Camera auto-ban is disabled because it can mistake faces/hands for exposure.");
+    await banSocket(socket, "Possible private-area exposure detected");
   });
 
   socket.on("safety-exposure-partner", async () => {
     if (!socketLimit(socket, "safety-partner", 5, 60 * 1000)) return;
 
-    const partnerId = peers.get(socket.id);
-    const partnerSocket = partnerId ? io.sockets.sockets.get(partnerId) : null;
-
-    await logReport({
-      type: "camera_safety_warning_partner",
-      reason: "Partner camera scanner warning logged only; auto-ban disabled to prevent face false positives",
-      reporterSocketId: socket.id,
-      reporterIpHash: hashIp(getIp(socket)),
-      reportedSocketId: partnerSocket ? partnerSocket.id : null,
-      reportedIpHash: partnerSocket ? hashIp(getIp(partnerSocket)) : null
-    });
+    await recordPartnerSafetySignal(socket, "Possible private-area exposure detected");
   });
 
   socket.on("safety-language-self", async () => {
